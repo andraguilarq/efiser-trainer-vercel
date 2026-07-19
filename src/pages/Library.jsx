@@ -1,34 +1,97 @@
+import { useMemo, useState } from "react";
 import cases from "../data/cases";
 
+function buildFlashcards(items) {
+  return items.map((item) => ({
+    id: item.id,
+    specialty: item.specialty || "Sin clasificar",
+    front: item.question,
+    back: item.options[item.answer],
+    explanation: item.explanation,
+    title: item.title,
+  }));
+}
+
 export default function Library() {
+  const [view, setView] = useState("flashcards");
+  const [specialty, setSpecialty] = useState("Todas");
+  const [current, setCurrent] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+
+  const specialties = useMemo(
+    () => ["Todas", ...new Set(cases.map((item) => item.specialty || "Sin clasificar"))],
+    [],
+  );
+  const flashcards = useMemo(() => {
+    const cards = buildFlashcards(cases).filter(
+      (card) => specialty === "Todas" || card.specialty === specialty,
+    );
+    return cards.sort(() => Math.random() - 0.5);
+  }, [specialty]);
   const bySpecialty = cases.reduce((acc, item) => {
     const key = item.specialty || "Sin clasificar";
     acc[key] = acc[key] || [];
     acc[key].push(item);
     return acc;
   }, {});
+  const card = flashcards[current % Math.max(flashcards.length, 1)];
+
+  function nextCard() {
+    setCurrent((value) => (value + 1) % flashcards.length);
+    setFlipped(false);
+  }
+
+  function changeSpecialty(event) {
+    setSpecialty(event.target.value);
+    setCurrent(0);
+    setFlipped(false);
+  }
 
   return (
     <section className="exam-shell">
-      <div className="page-header">
-        <p className="eyebrow">Banco actual</p>
-        <h1>Biblioteca</h1>
-        <p>{cases.length} casos clínicos cargados.</p>
+      <div className="exam-header">
+        <div>
+          <p className="eyebrow">Banco de estudio</p>
+          <h1>Biblioteca</h1>
+          <p>{cases.length} casos y {cases.length} flashcards disponibles.</p>
+        </div>
+        <div className="view-switch">
+          <button className={view === "flashcards" ? "" : "secondary-button"} onClick={() => setView("flashcards")}>Flashcards</button>
+          <button className={view === "cases" ? "" : "secondary-button"} onClick={() => setView("cases")}>Casos</button>
+        </div>
       </div>
 
-      <div className="library-grid">
-        {Object.entries(bySpecialty).map(([specialty, items]) => (
-          <div className="card library-card" key={specialty}>
-            <h2>{specialty}</h2>
-            <p>{items.length} casos</p>
-            <ul className="review-list">
-              {items.slice(0, 6).map((item) => (
-                <li key={item.id}>{item.title}</li>
-              ))}
-            </ul>
+      {view === "flashcards" ? (
+        <>
+          <label className="library-filter">
+            Especialidad
+            <select onChange={changeSpecialty} value={specialty}>
+              {specialties.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+          {card && (
+            <div className={`flashcard ${flipped ? "flipped" : ""}`} onClick={() => setFlipped((value) => !value)}>
+              <p className="eyebrow">{card.specialty} · {current + 1} de {flashcards.length}</p>
+              <h2>{flipped ? card.back : card.front}</h2>
+              {flipped && <p>{card.explanation}</p>}
+              <span>{flipped ? "Haz clic para ver la pregunta" : "Haz clic para revelar la respuesta"}</span>
+            </div>
+          )}
+          <div className="flashcard-actions">
+            <button className="secondary-button" onClick={() => setFlipped((value) => !value)}>Voltear</button>
+            <button onClick={nextCard}>Siguiente tarjeta</button>
           </div>
-        ))}
-      </div>
+        </>
+      ) : (
+        <div className="library-grid">
+          {Object.entries(bySpecialty).map(([name, items]) => (
+            <div className="card library-card" key={name}>
+              <h2>{name}</h2><p>{items.length} casos</p>
+              <ul className="review-list">{items.slice(0, 6).map((item) => <li key={item.id}>{item.title}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

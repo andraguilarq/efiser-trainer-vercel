@@ -10,6 +10,7 @@ import case009 from "./cases/nephrology/case009.json";
 import case010 from "./cases/nephrology/case010.json";
 import caseSeries from "./caseSeries";
 import extraCases from "./extraCases";
+import expandedCases from "./expandedCases";
 
 const cases = [
   case001,
@@ -24,6 +25,7 @@ const cases = [
   case010,
   ...caseSeries,
   ...extraCases,
+  ...expandedCases,
 ];
 
 export default cases;

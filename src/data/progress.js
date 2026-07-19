@@ -77,3 +77,17 @@ export function getOverallAccuracy(progress = loadProgress()) {
   if (!progress.questionsAnswered) return 0;
   return Math.round((progress.correctAnswers / progress.questionsAnswered) * 100);
 }
+
+export function getWeaknesses(progress = loadProgress(), limit = 5) {
+  return Object.entries(progress.bySpecialty || {})
+    .filter(([, value]) => value.total > 0)
+    .map(([specialty, value]) => ({
+      specialty,
+      total: value.total,
+      correct: value.correct,
+      accuracy: Math.round((value.correct / value.total) * 100),
+      errors: value.total - value.correct,
+    }))
+    .sort((a, b) => a.accuracy - b.accuracy || b.errors - a.errors)
+    .slice(0, limit);
+}
