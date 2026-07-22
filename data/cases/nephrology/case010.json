@@ -1,0 +1,16 @@
+{
+  "id": 10,
+  "specialty": "Nefrología",
+  "difficulty": 3,
+  "title": "Síndrome nefrótico",
+  "case": "Paciente masculino de 46 años con edema progresivo en piernas y párpados. TA 138/84 mmHg.\n\nAlbumina sérica 2.1 g/dL\nProteinuria 8.2 g/día\nColesterol total 318 mg/dL\nEGO: proteinuria 4+, sin hematuria significativa.",
+  "question": "¿Qué conjunto de hallazgos define mejor el síndrome nefrótico?",
+  "options": [
+    "Hematuria, cilindros eritrocitarios e hipertensión maligna",
+    "Proteinuria masiva, hipoalbuminemia, edema e hiperlipidemia",
+    "Piuria, fiebre y dolor lumbar",
+    "Oliguria aislada con creatinina normal"
+  ],
+  "answer": 1,
+  "explanation": "El síndrome nefrótico se caracteriza por proteinuria en rango nefrótico, hipoalbuminemia, edema e hiperlipidemia. La etiología requiere estudio dirigido y, en muchos adultos, valoración para biopsia renal."
+}
