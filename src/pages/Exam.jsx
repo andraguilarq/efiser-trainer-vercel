@@ -4,6 +4,15 @@ import { getWeaknesses, loadProgress, saveExamResult } from "../data/progress";
 
 const QUICK_SIZES = [10, 20, 50, 100];
 
+function cleanFeedbackText(value) {
+  return String(value || "")
+    .replace(/Fuente principal:[^\n]*/gi, "")
+    .replace(/Error frecuente:\s*Elegir una opción plausible por un dato aislado sin integrar el patrón clínico completo\.?/gi, "")
+    .replace(/Incorrecta\.\s*No integra el dato discriminador del caso:?\s*/gi, "")
+    .replace(/\n\s*\n\s*\n/g, "\n\n")
+    .trim();
+}
+
 function shuffle(items) {
   const copy = [...items];
   for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -201,7 +210,7 @@ export default function Exam() {
             <h2>{selected === question.answer ? "Correcto" : "Incorrecto"}</h2>
             <p><b>Respuesta correcta:</b> {question.options[question.answer]}</p>
             <div className="feedback-explanation">
-              {String(question.explanation || "")
+              {cleanFeedbackText(question.explanation)
                 .split(/\n\s*\n/)
                 .filter(Boolean)
                 .map((paragraph, index) => (
@@ -215,7 +224,7 @@ export default function Exam() {
                   {(selected === question.answer
                     ? question.optionFeedback.filter((_, index) => index !== question.answer)
                     : [question.optionFeedback[selected]]
-                  ).map((feedback, index) => (
+                  ).map(cleanFeedbackText).filter(Boolean).map((feedback, index) => (
                     <li key={`${question.id}-feedback-${index}`}>{feedback}</li>
                   ))}
                 </ul>

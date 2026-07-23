@@ -13,15 +13,15 @@ function sameIdea(left, right) {
 
 function buildExplanation(item) {
   const sections = [
-    `Por que esta es la mejor respuesta: ${item.r}`,
+    `Por qué esta es la mejor respuesta: ${item.r}`,
   ];
 
   if (item.f && !sameIdea(item.f, item.r)) {
-    sections.push(`Como interpretar el caso: ${item.f}`);
+    sections.push(`Cómo interpretar el caso: ${item.f}`);
   }
 
   if (item.alg && !sameIdea(item.alg, item.r) && !sameIdea(item.alg, item.f)) {
-    sections.push(`Conducta practica: ${item.alg}`);
+    sections.push(`Conducta práctica: ${item.alg}`);
   }
 
   const teachingPoint = item.p || item.key;
@@ -30,22 +30,21 @@ function buildExplanation(item) {
   }
 
   if (item.e && !sameIdea(item.e, item.r) && !sameIdea(item.e, item.f)) {
-    sections.push(`Trampa clinica: ${item.e}`);
+    sections.push(`Trampa clínica: ${item.e}`);
   }
 
   return sections.join("\n\n");
 }
 
 function normalizeOptions(optionPairs, answer, rationale, discriminator) {
+  const hasCompleteFeedback = optionPairs.every((entry) => Array.isArray(entry) && entry[1]);
   return {
     options: optionPairs.map((entry) => Array.isArray(entry) ? entry[0] : entry),
-    optionFeedback: optionPairs.map((entry, index) => {
+    optionFeedback: hasCompleteFeedback ? optionPairs.map((entry, index) => {
       const explicit = Array.isArray(entry) ? entry[1] : null;
-      const reason = explicit || (index === answer
-        ? rationale
-        : `No es la mejor opcion en este escenario. El dato decisivo es: ${discriminator || rationale}`);
+      const reason = explicit || (index === answer ? rationale : discriminator);
       return `${index === answer ? "Correcta" : "Incorrecta"}. ${reason}`;
-    }),
+    }) : null,
   };
 }
 
