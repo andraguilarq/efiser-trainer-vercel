@@ -22,6 +22,24 @@ function shuffle(items) {
   return copy;
 }
 
+function shuffleCaseOptions(item) {
+  const entries = item.options.map((option, index) => ({
+    option,
+    feedback: Array.isArray(item.optionFeedback) ? item.optionFeedback[index] : null,
+    correct: index === item.answer,
+  }));
+  const shuffledEntries = shuffle(entries);
+
+  return {
+    ...item,
+    options: shuffledEntries.map((entry) => entry.option),
+    answer: shuffledEntries.findIndex((entry) => entry.correct),
+    optionFeedback: Array.isArray(item.optionFeedback)
+      ? shuffledEntries.map((entry) => entry.feedback)
+      : null,
+  };
+}
+
 export default function Exam() {
   const [examCases, setExamCases] = useState([]);
   const [requestedSize, setRequestedSize] = useState(Math.min(20, cases.length));
@@ -43,7 +61,7 @@ export default function Exam() {
 
   function startExam(size) {
     const safeSize = Math.max(1, Math.min(Number(size) || 1, cases.length));
-    setExamCases(shuffle(cases).slice(0, safeSize));
+    setExamCases(shuffle(cases).slice(0, safeSize).map(shuffleCaseOptions));
     setRequestedSize(safeSize);
     setCurrent(0);
     setSelected(null);
@@ -62,7 +80,10 @@ export default function Exam() {
     const priorityIds = new Set(priority.map((item) => item.id));
     const remaining = shuffle(cases.filter((item) => !priorityIds.has(item.id)));
     const priorityCount = Math.min(priority.length, Math.ceil(safeSize * 0.7));
-    setExamCases(shuffle([...priority.slice(0, priorityCount), ...remaining.slice(0, safeSize - priorityCount)]));
+    setExamCases(
+      shuffle([...priority.slice(0, priorityCount), ...remaining.slice(0, safeSize - priorityCount)])
+        .map(shuffleCaseOptions),
+    );
     setRequestedSize(safeSize);
     setCurrent(0);
     setSelected(null);
