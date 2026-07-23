@@ -1,3 +1,41 @@
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function sameIdea(left, right) {
+  return normalizeText(left) === normalizeText(right);
+}
+
+function buildExplanation(item) {
+  const sections = [
+    `Por que esta es la mejor respuesta: ${item.r}`,
+  ];
+
+  if (item.f && !sameIdea(item.f, item.r)) {
+    sections.push(`Como interpretar el caso: ${item.f}`);
+  }
+
+  if (item.alg && !sameIdea(item.alg, item.r) && !sameIdea(item.alg, item.f)) {
+    sections.push(`Conducta practica: ${item.alg}`);
+  }
+
+  const teachingPoint = item.p || item.key;
+  if (teachingPoint && !sameIdea(teachingPoint, item.r) && !sameIdea(teachingPoint, item.f) && !sameIdea(teachingPoint, item.alg)) {
+    sections.push(`Dato que decide la pregunta: ${teachingPoint}`);
+  }
+
+  if (item.e && !sameIdea(item.e, item.r) && !sameIdea(item.e, item.f)) {
+    sections.push(`Trampa clinica: ${item.e}`);
+  }
+
+  return sections.join("\n\n");
+}
+
 function normalizeOptions(optionPairs, answer, rationale, discriminator) {
   return {
     options: optionPairs.map((entry) => Array.isArray(entry) ? entry[0] : entry),
@@ -5,7 +43,7 @@ function normalizeOptions(optionPairs, answer, rationale, discriminator) {
       const explicit = Array.isArray(entry) ? entry[1] : null;
       const reason = explicit || (index === answer
         ? rationale
-        : `No integra el dato discriminador del caso: ${discriminator || rationale}`);
+        : `No es la mejor opcion en este escenario. El dato decisivo es: ${discriminator || rationale}`);
       return `${index === answer ? "Correcta" : "Incorrecta"}. ${reason}`;
     }),
   };
@@ -28,14 +66,7 @@ export function buildWordSummaryCases({ startId, prefix, specialty, source, case
       question: item.q,
       options,
       answer: item.a,
-      explanation: [
-        `Respuesta razonada: ${item.r}`,
-        `Fisiopatología e interpretación clínica: ${item.f || item.r}`,
-        `Algoritmo diagnóstico/terapéutico: ${item.alg || "Identifique primero la gravedad, confirme el mecanismo con el estudio que cambia conducta y trate antes las amenazas vitales."}`,
-        `Perla EFISER: ${item.p || item.key || item.r}`,
-        `Error frecuente: ${item.e || "Elegir una opción plausible por un dato aislado sin integrar el patrón clínico completo."}`,
-        `Fuente principal: ${source}.`,
-      ].join("\n\n"),
+      explanation: buildExplanation(item),
       optionFeedback,
     };
   });

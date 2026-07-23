@@ -217,6 +217,25 @@ body{
   padding-top:20px;
 }
 
+.feedback-explanation{
+  display:grid;
+  gap:12px;
+  margin:18px 0;
+}
+
+.feedback-explanation p{
+  background:#f8fafc;
+  border-left:4px solid #2563eb;
+  border-radius:0 10px 10px 0;
+  line-height:1.65;
+  margin:0;
+  padding:14px 16px;
+}
+
+.option-feedback{
+  margin:22px 0;
+}
+
 .results-grid{
   display:grid;
   gap:16px;

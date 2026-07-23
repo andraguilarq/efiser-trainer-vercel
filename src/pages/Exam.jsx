@@ -199,15 +199,23 @@ export default function Exam() {
           <div className="feedback">
             <h2>{selected === question.answer ? "Correcto" : "Incorrecto"}</h2>
             <p><b>Respuesta correcta:</b> {question.options[question.answer]}</p>
-            <p>{question.explanation}</p>
+            <div className="feedback-explanation">
+              {String(question.explanation || "")
+                .split(/\n\s*\n/)
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={`${question.id}-explanation-${index}`}>{paragraph}</p>
+                ))}
+            </div>
             {question.optionFeedback ? (
               <div className="option-feedback">
-                <h3>Revisión de las opciones</h3>
+                <h3>{selected === question.answer ? "Por qué las otras no son la mejor elección" : "Por qué tu respuesta no era la mejor elección"}</h3>
                 <ul className="review-list">
-                  {question.optionFeedback.map((feedback, index) => (
-                    <li key={`${question.id}-feedback-${index}`}>
-                      <b>{String.fromCharCode(65 + index)}.</b> {feedback}
-                    </li>
+                  {(selected === question.answer
+                    ? question.optionFeedback.filter((_, index) => index !== question.answer)
+                    : [question.optionFeedback[selected]]
+                  ).map((feedback, index) => (
+                    <li key={`${question.id}-feedback-${index}`}>{feedback}</li>
                   ))}
                 </ul>
               </div>
