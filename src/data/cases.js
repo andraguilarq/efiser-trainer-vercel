@@ -67,8 +67,11 @@ function expandSharedClinicalContext(items) {
   const groups = new Map();
   items.forEach((item, index) => {
     if (!item.caseSet) return;
-    if (!groups.has(item.caseSet)) groups.set(item.caseSet, []);
-    groups.get(item.caseSet).push({ item, index });
+    // caseSet values can repeat between imported banks. Never join cases
+    // from different sources, otherwise an unrelated patient is appended.
+    const groupKey = `${item.source || "unknown"}::${item.caseSet}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push({ item, index });
   });
 
   const expanded = items.map((item) => ({ ...item }));
@@ -93,7 +96,10 @@ function expandSharedClinicalContext(items) {
   return expanded;
 }
 
-const allCases = expandSharedClinicalContext(rawCases);
+// Cada reactivo debe conservar únicamente el caso que le corresponde.
+// No inferimos evoluciones por coincidencia de caseSet: los bancos importados
+// pueden reutilizar identificadores y eso mezcla pacientes no relacionados.
+const allCases = rawCases;
 
 function normalize(value) {
   return String(value ?? "")
