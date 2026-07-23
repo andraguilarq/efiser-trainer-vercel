@@ -1,16 +1,26 @@
-# React + Vite
+# EFISER Trainer
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación de entrenamiento para el examen EFISER, construida con React y Vite.
 
-Currently, two official plugins are available:
+## Desarrollo local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+## Verificación de producción
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run build
+```
 
-## Expanding the Oxlint configuration
+## Publicación en Vercel
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+1. Subir a la raíz del repositorio `src`, `public`, `index.html`, `package.json`, `package-lock.json`, `vite.config.js` y `vercel.json`.
+2. No subir `node_modules`, `dist`, `.sandbox-bin` ni archivos ZIP.
+3. Conectar el repositorio a Vercel usando la rama `main`.
+4. Vercel ejecutará `npm run build` y publicará la carpeta `dist`.
+
+El progreso de cada usuario se conserva localmente en su navegador.

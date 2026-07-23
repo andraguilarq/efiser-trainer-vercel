@@ -17,8 +17,12 @@ import efiserRecalledCases from "./efiserRecalledCases";
 import latestWordAdvancedCases from "./latestWordAdvancedCases";
 import priorityExpansionCases from "./priorityExpansionCases";
 import efiserPriorityCases from "./efiserPriorityCases";
+import wordCasesCardio from "./wordCasesCardio";
+import wordCasesEndocrino from "./wordCasesEndocrino";
+import wordCasesGastro from "./wordCasesGastro";
+import wordCasesRemaining from "./wordCasesRemaining";
 
-const allCases = [
+const rawCases = [
   case001,
   case002,
   case003,
@@ -38,7 +42,58 @@ const allCases = [
   ...latestWordAdvancedCases,
   ...priorityExpansionCases,
   ...efiserPriorityCases,
+  ...wordCasesCardio,
+  ...wordCasesEndocrino,
+  ...wordCasesGastro,
+  ...wordCasesRemaining,
 ];
+
+function cleanContinuation(text) {
+  return String(text || "")
+    .replace(/^\s*(la|el)\s+mism[oa]\s+paciente[.:,;-]*\s*/i, "")
+    .replace(/^\s*mism[oa]\s+paciente[.:,;-]*\s*/i, "")
+    .replace(/^\s*mismo\s+caso[.:,;-]*\s*/i, "")
+    .trim();
+}
+
+function hasSubstantialContext(text, baseText) {
+  const current = normalize(text);
+  const base = normalize(baseText);
+  if (!current || !base) return false;
+  return current.includes(base.slice(0, Math.min(120, base.length)));
+}
+
+function expandSharedClinicalContext(items) {
+  const groups = new Map();
+  items.forEach((item, index) => {
+    if (!item.caseSet) return;
+    if (!groups.has(item.caseSet)) groups.set(item.caseSet, []);
+    groups.get(item.caseSet).push({ item, index });
+  });
+
+  const expanded = items.map((item) => ({ ...item }));
+  groups.forEach((members) => {
+    if (members.length < 2) return;
+    const ordered = [...members].sort((left, right) =>
+      (Number(left.item.step) || 1) - (Number(right.item.step) || 1) || left.index - right.index,
+    );
+    const base = ordered[0].item;
+    const baseText = String(base.case || "").trim();
+    if (!baseText) return;
+
+    ordered.slice(1).forEach(({ item, index }) => {
+      if (hasSubstantialContext(item.case, baseText)) return;
+      const continuation = cleanContinuation(item.case);
+      expanded[index] = {
+        ...item,
+        case: `${baseText}\n\nEvolución o dato adicional para este reactivo:\n${continuation}`,
+      };
+    });
+  });
+  return expanded;
+}
+
+const allCases = expandSharedClinicalContext(rawCases);
 
 function normalize(value) {
   return String(value ?? "")
