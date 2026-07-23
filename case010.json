@@ -1,0 +1,15 @@
+{
+  "id": 1,
+  "specialty": "Nefrología",
+  "title": "ERC y diabetes",
+  "case": "Paciente masculino de 64 años con DM2 de 15 años, HAS y ERC G3a.\n\nTFG: 56 ml/min\nAlbuminuria: 540 mg/g\nPotasio: 4.5 mEq/L\nHbA1c: 7.4%",
+  "question": "¿Cuál intervención disminuye la progresión de la enfermedad renal?",
+  "options": [
+    "Agregar glibenclamida",
+    "Iniciar un iSGLT2",
+    "Suspender metformina",
+    "Agregar pioglitazona"
+  ],
+  "answer": 1,
+  "explanation": "Los iSGLT2 disminuyen la progresión de la ERC y reducen eventos cardiovasculares."
+}
