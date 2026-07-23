@@ -181,6 +181,7 @@ export default function Exam() {
       </div>
       <div className="progress-bar"><div className="progress-fill" style={{ width: `${((current + 1) / total) * 100}%` }} /></div>
       <div className="card exam-card">
+        <p className="eyebrow case-title">{question.title}</p>
         <p className="case-text">{question.case}</p>
         <h3>{question.question}</h3>
         <div className="options-list">
