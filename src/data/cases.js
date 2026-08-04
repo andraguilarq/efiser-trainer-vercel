@@ -22,6 +22,7 @@ import wordCasesEndocrino from "./wordCasesEndocrino";
 import wordCasesGastro from "./wordCasesGastro";
 import wordCasesRemaining from "./wordCasesRemaining";
 import researchPdfCases from "./researchPdfCases";
+import scaProgressiveCases from "./scaProgressiveCases";
 
 const rawCases = [
   case001,
@@ -48,6 +49,7 @@ const rawCases = [
   ...wordCasesGastro,
   ...wordCasesRemaining,
   ...researchPdfCases,
+  ...scaProgressiveCases,
 ];
 
 function cleanContinuation(text) {
