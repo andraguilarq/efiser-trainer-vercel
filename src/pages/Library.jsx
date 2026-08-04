@@ -3,8 +3,10 @@ import cases from "../data/cases";
 import coreChapters from "../data/libraryChapters";
 import neuroChapters from "../data/libraryChaptersNeuro";
 import medicineChapters from "../data/libraryChaptersMedicine";
+import researchChapters from "../data/libraryChaptersResearch";
+import researchFlashcards from "../data/researchFlashcards";
 
-const chapters = [...coreChapters, ...neuroChapters, ...medicineChapters];
+const chapters = [...coreChapters, ...neuroChapters, ...medicineChapters, ...researchChapters];
 
 function buildFlashcards(items) {
   return items.map((item) => ({
@@ -29,7 +31,7 @@ export default function Library() {
     [],
   );
   const flashcards = useMemo(() => {
-    const cards = buildFlashcards(cases).filter(
+    const cards = [...buildFlashcards(cases), ...researchFlashcards].filter(
       (card) => specialty === "Todas" || card.specialty === specialty,
     );
     return cards.sort(() => Math.random() - 0.5);
@@ -60,7 +62,7 @@ export default function Library() {
         <div>
           <p className="eyebrow">Banco de estudio</p>
           <h1>Biblioteca</h1>
-          <p>{chapters.length} capítulos, {cases.length} casos y {cases.length} flashcards disponibles.</p>
+          <p>{chapters.length} capítulos, {cases.length} casos y {cases.length + researchFlashcards.length} flashcards disponibles.</p>
         </div>
         <div className="view-switch">
           <button className={view === "flashcards" ? "" : "secondary-button"} onClick={() => setView("flashcards")}>Flashcards</button>
@@ -123,12 +125,14 @@ export default function Library() {
                 <p>{section.body}</p>
               </section>
             ))}
-            <section className="chapter-section">
-              <h3>Fuentes vigentes consultadas</h3>
-              <ul className="source-list">
-                {chapter.refs.map((ref) => <li key={ref}><a href={ref} target="_blank" rel="noreferrer">{ref}</a></li>)}
-              </ul>
-            </section>
+            {chapter.refs?.length > 0 && (
+              <section className="chapter-section">
+                <h3>Fuentes vigentes consultadas</h3>
+                <ul className="source-list">
+                  {chapter.refs.map((ref) => <li key={ref}><a href={ref} target="_blank" rel="noreferrer">{ref}</a></li>)}
+                </ul>
+              </section>
+            )}
           </article>
         </div>
       )}
