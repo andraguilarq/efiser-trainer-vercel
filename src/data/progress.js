@@ -1,4 +1,11 @@
-const STORAGE_KEY = "efiser-trainer-progress";
+import { getActiveProfileId } from "./profiles.js";
+
+const LEGACY_STORAGE_KEY = "efiser-trainer-progress";
+
+function storageKey() {
+  const profileId = getActiveProfileId();
+  return profileId ? `efiser-trainer-progress:${profileId}` : LEGACY_STORAGE_KEY;
+}
 
 const emptyProgress = {
   examsCompleted: 0,
@@ -12,7 +19,12 @@ const emptyProgress = {
 
 export function loadProgress() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = storageKey();
+    let raw = localStorage.getItem(key);
+    if (!raw && getActiveProfileId() === "andrea") {
+      raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (raw) localStorage.setItem(key, raw);
+    }
     return raw ? { ...emptyProgress, ...JSON.parse(raw) } : emptyProgress;
   } catch {
     return emptyProgress;
@@ -22,7 +34,7 @@ export function loadProgress() {
 export function saveExamResult(result) {
   const progress = loadProgress();
   const nextBySpecialty = { ...progress.bySpecialty };
-  const nextMissedIds = { ...(progress.missedIds || {}) };
+  const nextMissedIds = { ...progress.missedIds };
 
   result.answers.forEach((answer) => {
     const key = answer.specialty || "Sin clasificar";
@@ -65,12 +77,12 @@ export function saveExamResult(result) {
     ].slice(0, 30),
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  localStorage.setItem(storageKey(), JSON.stringify(next));
   return next;
 }
 
 export function resetProgress() {
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(storageKey());
 }
 
 export function getOverallAccuracy(progress = loadProgress()) {

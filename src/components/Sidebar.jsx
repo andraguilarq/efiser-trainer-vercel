@@ -1,4 +1,4 @@
-export default function Sidebar({ setPage }) {
+export default function Sidebar({ profile, setPage }) {
   const items = [
     { icon: "🏠", text: "Dashboard", page: "dashboard" },
     { icon: "📝", text: "Nuevo examen", page: "exam" },
@@ -16,6 +16,10 @@ export default function Sidebar({ setPage }) {
           {item.icon} {item.text}
         </button>
       ))}
+      <div className="sidebar-profile">
+        <span>Perfil activo</span>
+        <strong>{profile.name}</strong>
+      </div>
     </aside>
   );
 }

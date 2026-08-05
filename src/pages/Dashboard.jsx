@@ -2,7 +2,7 @@ import cases from "../data/cases";
 import { getOverallAccuracy, loadProgress } from "../data/progress";
 import StatCard from "../components/StatCard";
 
-export default function Dashboard() {
+export default function Dashboard({ profile }) {
   const progress = loadProgress();
   const accuracy = getOverallAccuracy(progress);
   const latest = progress.history?.[0];
@@ -12,7 +12,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <p className="eyebrow">EFISER Trainer</p>
-          <h1>Bienvenida Andrea</h1>
+          <h1>Hola, {profile.name}</h1>
           <h3>Objetivo: derivación a Endocrinología</h3>
         </div>
       </div>

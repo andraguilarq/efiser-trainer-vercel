@@ -5,6 +5,7 @@ import neuroChapters from "../data/libraryChaptersNeuro";
 import medicineChapters from "../data/libraryChaptersMedicine";
 import researchChapters from "../data/libraryChaptersResearch";
 import researchFlashcards from "../data/researchFlashcards";
+import { loadReadChapters, setChapterRead } from "../data/libraryProgress";
 
 const chapters = [...coreChapters, ...neuroChapters, ...medicineChapters, ...researchChapters];
 
@@ -25,6 +26,7 @@ export default function Library() {
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState(chapters[0]?.id);
+  const [readChapterIds, setReadChapterIds] = useState(loadReadChapters);
 
   const specialties = useMemo(
     () => ["Todas", ...new Set(cases.map((item) => item.specialty || "Sin clasificar"))],
@@ -44,6 +46,12 @@ export default function Library() {
   }, {});
   const card = flashcards[current % Math.max(flashcards.length, 1)];
   const chapter = chapters.find((item) => item.id === selectedChapter) || chapters[0];
+  const chapterIsRead = chapter ? readChapterIds.includes(String(chapter.id)) : false;
+
+  function toggleChapterRead() {
+    if (!chapter) return;
+    setReadChapterIds(setChapterRead(chapter.id, !chapterIsRead));
+  }
 
   function nextCard() {
     setCurrent((value) => (value + 1) % flashcards.length);
@@ -102,6 +110,14 @@ export default function Library() {
           ))}
         </div>
       ) : (
+        <>
+        <div className="reading-summary">
+          <div>
+            <strong>{readChapterIds.length} de {chapters.length} resúmenes leídos</strong>
+            <span>El avance corresponde únicamente a tu perfil.</span>
+          </div>
+          <div className="mini-bar"><div style={{ width: `${chapters.length ? Math.min(100, (readChapterIds.length / chapters.length) * 100) : 0}%` }} /></div>
+        </div>
         <div className="chapter-layout">
           <nav className="chapter-list" aria-label="Capítulos EFISER">
             {chapters.map((item) => (
@@ -111,13 +127,18 @@ export default function Library() {
                 onClick={() => setSelectedChapter(item.id)}
               >
                 <strong>{item.title}</strong>
-                <span>{item.specialty}</span>
+                <span>{readChapterIds.includes(String(item.id)) ? "✓ Leído" : item.specialty}</span>
               </button>
             ))}
           </nav>
           <article className="chapter-detail">
             <p className="eyebrow">{chapter.priority} · actualización {chapter.updated}</p>
-            <h2>{chapter.title}</h2>
+            <div className="chapter-title-row">
+              <h2>{chapter.title}</h2>
+              <button className={chapterIsRead ? "read-button complete" : "read-button"} onClick={toggleChapterRead}>
+                {chapterIsRead ? "✓ Leído" : "Marcar como leído"}
+              </button>
+            </div>
             <p className="chapter-trigger"><strong>Origen EFISER:</strong> {chapter.trigger}</p>
             {chapter.sections.map((section) => (
               <section className="chapter-section" key={section.heading}>
@@ -135,6 +156,7 @@ export default function Library() {
             )}
           </article>
         </div>
+        </>
       )}
     </section>
   );
