@@ -169,6 +169,8 @@ function makeCase(profile, profileIndex, fact, factIndex, variation) {
   const correctIndex = (profileIndex + factIndex * 2 + variation) % options.length;
   const shuffled = options.map((text, index) => ({ text, correct: index === 0, why: index === 0 ? `Es correcta porque ${rationale} Punto clave: ${concept.toLowerCase()} debe conectarse con los datos clínicos, no memorizarse de forma aislada.` : wrong[index - 1].why }));
   const rotated = shuffled.map((_, index) => shuffled[(index - correctIndex + shuffled.length) % shuffled.length]);
+  const ordinal = factIndex * 4 + variation;
+  const difficulty = ordinal < 4 ? 3 : ordinal < 13 ? 4 : 5;
   return {
     id: 41001 + profileIndex * 20 + factIndex * 4 + variation,
     title: `Caso ${41001 + profileIndex * 20 + factIndex * 4 + variation}`,
@@ -178,7 +180,7 @@ function makeCase(profile, profileIndex, fact, factIndex, variation) {
     sourceConcept: concept,
     subtopic,
     sourceMode: "resumen-word-20260817",
-    difficulty: variation === 0 ? 3 : variation === 1 || variation === 2 ? 4 : 5,
+    difficulty,
     caseSeriesId: `${seriesSlug}-${factIndex + 1}`,
     case: caseText,
     question,

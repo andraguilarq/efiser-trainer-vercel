@@ -16,6 +16,8 @@ assert(clinicalExpansion20260817Manifest.length === 35, "Deben existir 35 docume
 assert(addedCases.length === 700, "Deben generarse 700 reactivos nuevos.");
 assert(clinicalExpansion20260817Manifest.every((item) => item.questions === 20), "Cada documento debe aportar 20 reactivos.");
 assert(addedCases.every((item) => item.id && item.specialty && item.difficulty && item.answer >= 0 && item.optionFeedback?.length === item.options.length), "Todo reactivo debe conservar metadatos y retroalimentación completa.");
+const difficultyDistribution = addedCases.reduce((accumulator, item) => ({ ...accumulator, [item.difficulty]: (accumulator[item.difficulty] || 0) + 1 }), {});
+assert(difficultyDistribution[3] === 140 && difficultyDistribution[4] === 315 && difficultyDistribution[5] === 245, "La distribución nueva debe ser 20% moderada, 45% difícil y 35% muy difícil.");
 
 const first = selectExamCases(addedCases, { size: 10, recentIds: [] });
 assert(new Set(first.map((item) => item.id)).size === 10, "No debe repetirse un reactivo en el mismo examen.");
@@ -26,4 +28,4 @@ assert(second.every((item) => !first.some((prior) => prior.id === item.id)), "El
 const endocrine = selectExamCases(addedCases, { size: 5, specialty: "Endocrinología", recentIds: [] });
 assert(endocrine.length === 5 && endocrine.every((item) => item.specialty === "Endocrinología"), "El filtro por especialidad debe conservar sólo la especialidad solicitada.");
 
-console.log(JSON.stringify({ documents: clinicalExpansion20260817Manifest.length, addedCases: addedCases.length, firstExam: first.length, secondExam: second.length, endocrine: endocrine.length }));
+console.log(JSON.stringify({ documents: clinicalExpansion20260817Manifest.length, addedCases: addedCases.length, difficultyDistribution, firstExam: first.length, secondExam: second.length, endocrine: endocrine.length }));
