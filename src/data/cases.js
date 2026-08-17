@@ -56,7 +56,10 @@ const rawCases = [
   ...clinicalExpansion20260817,
 ];
 
-const allCases = rawCases;
+const allCases = rawCases.map((item) => ({
+  ...item,
+  difficulty: Number(item.difficulty) || 3,
+}));
 
 function normalize(value) {
   return String(value ?? "")
