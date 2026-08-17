@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import cases from "../data/cases";
 import { getWeaknesses, loadProgress, saveExamResult } from "../data/progress";
 import { getRecentCaseIds, getSpecialties, rememberCaseIds, selectExamCases } from "../data/examSelection";
+import { isSupabaseConfigured } from "../data/supabase";
+import { saveRemoteExamResult } from "../data/remoteResults";
 
 const QUICK_SIZES = [10, 20, 50, 100];
 
@@ -125,18 +127,36 @@ export default function Exam() {
         caseId: question.id,
         title: `Caso ${current + 1}`,
         specialty: question.specialty,
+        difficulty: question.difficulty,
+        questionText: question.question,
+        caseText: question.case,
         selected,
         correct,
         correctAnswer: question.answer,
+        selectedAnswer: question.options[selected],
+        correctAnswerText: question.options[question.answer],
       },
     ]);
     setShowFeedback(true);
   }
 
-  function nextQuestion() {
+  async function nextQuestion() {
     if (current + 1 >= total) {
       if (!saved) {
-        saveExamResult({ answers, grade, percentage, score, total });
+        const result = { answers, grade, percentage, score, total };
+        saveExamResult(result);
+        if (isSupabaseConfigured) {
+          try {
+            await saveRemoteExamResult(result, {
+              specialty: specialtyFilter,
+              difficulty: difficultyFilter,
+              requestedSize,
+            });
+          } catch (error) {
+            console.error("No se pudo guardar el examen en la cuenta", error);
+            alert("El examen se guardó en este navegador, pero no pudo sincronizarse con tu cuenta. Revisa tu conexión e intenta iniciar sesión de nuevo.");
+          }
+        }
         setSaved(true);
       }
       setCompleted(true);

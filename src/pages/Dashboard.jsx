@@ -1,9 +1,24 @@
 import cases from "../data/cases";
+import { useEffect, useState } from "react";
 import { getOverallAccuracy, loadProgress } from "../data/progress";
+import { isSupabaseConfigured } from "../data/supabase";
+import { loadRemoteProgress } from "../data/remoteResults";
 import StatCard from "../components/StatCard";
 
 export default function Dashboard({ profile }) {
-  const progress = loadProgress();
+  const [progress, setProgress] = useState(loadProgress());
+
+  useEffect(() => {
+    let active = true;
+    if (!isSupabaseConfigured) {
+      setProgress(loadProgress());
+      return () => { active = false; };
+    }
+    loadRemoteProgress(profile.id)
+      .then((next) => { if (active) setProgress(next); })
+      .catch((error) => console.warn("No se pudo cargar el progreso remoto", error.message));
+    return () => { active = false; };
+  }, [profile.id]);
   const accuracy = getOverallAccuracy(progress);
   const latest = progress.history?.[0];
 
