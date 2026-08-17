@@ -3,3 +3,5 @@ dist/
 .vite/
 .sandbox-bin/
 *.log
+docx_extracts_*/
+.tmp-case-count/

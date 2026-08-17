@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import cases from "../data/cases";
 import { getWeaknesses, loadProgress, saveExamResult } from "../data/progress";
+import { getRecentCaseIds, getSpecialties, rememberCaseIds, selectExamCases } from "../data/examSelection";
 
 const QUICK_SIZES = [10, 20, 50, 100];
 
@@ -49,6 +50,14 @@ export default function Exam() {
   const [answers, setAnswers] = useState([]);
   const [completed, setCompleted] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [specialtyFilter, setSpecialtyFilter] = useState("Todas");
+  const [difficultyFilter, setDifficultyFilter] = useState("Todas");
+
+  const specialties = useMemo(() => getSpecialties(cases), []);
+  const eligibleCases = useMemo(() => cases.filter((item) => (
+    (specialtyFilter === "Todas" || item.specialty === specialtyFilter)
+    && (difficultyFilter === "Todas" || Number(item.difficulty) === Number(difficultyFilter))
+  )), [specialtyFilter, difficultyFilter]);
 
   const question = examCases[current];
   const total = examCases.length;
@@ -60,8 +69,15 @@ export default function Exam() {
   const grade = (percentage / 10).toFixed(1);
 
   function startExam(size) {
-    const safeSize = Math.max(1, Math.min(Number(size) || 1, cases.length));
-    setExamCases(shuffle(cases).slice(0, safeSize).map(shuffleCaseOptions));
+    const safeSize = Math.max(1, Math.min(Number(size) || 1, eligibleCases.length));
+    const selection = selectExamCases(cases, {
+      size: safeSize,
+      specialty: specialtyFilter,
+      difficulty: difficultyFilter,
+      recentIds: getRecentCaseIds(),
+    });
+    rememberCaseIds(selection.map((item) => item.id));
+    setExamCases(selection.map(shuffleCaseOptions));
     setRequestedSize(safeSize);
     setCurrent(0);
     setSelected(null);
@@ -72,18 +88,22 @@ export default function Exam() {
   }
 
   function startAdaptiveExam(size = requestedSize) {
-    const safeSize = Math.max(1, Math.min(Number(size) || 10, cases.length));
+    const safeSize = Math.max(1, Math.min(Number(size) || 10, eligibleCases.length));
     const progress = loadProgress();
     const weakSpecialties = new Set(getWeaknesses(progress, 3).map((item) => item.specialty));
     const missedIds = new Set(Object.keys(progress.missedIds || {}).map(Number));
-    const priority = shuffle(cases.filter((item) => missedIds.has(Number(item.id)) || weakSpecialties.has(item.specialty)));
-    const priorityIds = new Set(priority.map((item) => item.id));
-    const remaining = shuffle(cases.filter((item) => !priorityIds.has(item.id)));
-    const priorityCount = Math.min(priority.length, Math.ceil(safeSize * 0.7));
-    setExamCases(
-      shuffle([...priority.slice(0, priorityCount), ...remaining.slice(0, safeSize - priorityCount)])
-        .map(shuffleCaseOptions),
-    );
+    const priorityIds = eligibleCases
+      .filter((item) => missedIds.has(Number(item.id)) || weakSpecialties.has(item.specialty))
+      .map((item) => item.id);
+    const selection = selectExamCases(cases, {
+      size: safeSize,
+      specialty: specialtyFilter,
+      difficulty: difficultyFilter,
+      recentIds: getRecentCaseIds(),
+      priorityIds,
+    });
+    rememberCaseIds(selection.map((item) => item.id));
+    setExamCases(selection.map(shuffleCaseOptions));
     setRequestedSize(safeSize);
     setCurrent(0);
     setSelected(null);
@@ -103,7 +123,7 @@ export default function Exam() {
       ...previous,
       {
         caseId: question.id,
-        title: question.title,
+        title: `Caso ${current + 1}`,
         specialty: question.specialty,
         selected,
         correct,
@@ -138,38 +158,56 @@ export default function Exam() {
         <div className="page-header">
           <p className="eyebrow">Nuevo simulador</p>
           <h1>¿Cuántas preguntas quieres responder?</h1>
-          <p>Se elegirán al azar y no se repetirán dentro del examen.</p>
+          <p>Se elegirán sin repetirse dentro del examen y se priorizarán los casos no vistos recientemente.</p>
         </div>
 
         <div className="card exam-card setup-card">
+          <div className="exam-filters">
+            <label>
+              <span>Especialidad</span>
+              <select value={specialtyFilter} onChange={(event) => setSpecialtyFilter(event.target.value)}>
+                <option value="Todas">Todas las especialidades</option>
+                {specialties.map((specialty) => <option key={specialty} value={specialty}>{specialty}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Dificultad</span>
+              <select value={difficultyFilter} onChange={(event) => setDifficultyFilter(event.target.value)}>
+                <option value="Todas">Todas</option>
+                <option value="3">Moderada</option>
+                <option value="4">Difícil</option>
+                <option value="5">Muy difícil</option>
+              </select>
+            </label>
+          </div>
           <div className="quick-size-grid">
-            {QUICK_SIZES.filter((size) => size <= cases.length).map((size) => (
+            {QUICK_SIZES.filter((size) => size <= eligibleCases.length).map((size) => (
               <button key={size} onClick={() => startExam(size)}>
                 {size} preguntas
               </button>
             ))}
-            <button className="secondary-button" onClick={() => startExam(cases.length)}>
-              Todo el banco ({cases.length})
+            <button className="secondary-button" onClick={() => startExam(eligibleCases.length)} disabled={!eligibleCases.length}>
+              Todo el filtro ({eligibleCases.length})
             </button>
-            <button className="adaptive-button" onClick={() => startAdaptiveExam(requestedSize)}>
+            <button className="adaptive-button" disabled={!eligibleCases.length} onClick={() => startAdaptiveExam(requestedSize)}>
               Repaso inteligente ({requestedSize})
             </button>
           </div>
 
           <label className="custom-size">
-            <span>Cantidad personalizada (1–{cases.length})</span>
+            <span>Cantidad personalizada (1–{eligibleCases.length || 1})</span>
             <div>
               <input
-                max={cases.length}
+                max={eligibleCases.length || 1}
                 min="1"
                 onChange={(event) => setRequestedSize(event.target.value)}
                 type="number"
                 value={requestedSize}
               />
-              <button onClick={() => startExam(requestedSize)}>Comenzar</button>
+              <button disabled={!eligibleCases.length} onClick={() => startExam(requestedSize)}>Comenzar</button>
             </div>
           </label>
-          <p className="setup-note">Banco disponible: {cases.length} casos clínicos.</p>
+          <p className="setup-note">Banco disponible con este filtro: {eligibleCases.length} casos clínicos.</p>
         </div>
       </section>
     );
@@ -239,13 +277,10 @@ export default function Exam() {
             </div>
             {question.optionFeedback ? (
               <div className="option-feedback">
-                <h3>{selected === question.answer ? "Por qué las otras no son la mejor elección" : "Por qué tu respuesta no era la mejor elección"}</h3>
+                <h3>Revisión de las opciones</h3>
                 <ul className="review-list">
-                  {(selected === question.answer
-                    ? question.optionFeedback.filter((_, index) => index !== question.answer)
-                    : [question.optionFeedback[selected]]
-                  ).map(cleanFeedbackText).filter(Boolean).map((feedback, index) => (
-                    <li key={`${question.id}-feedback-${index}`}>{feedback}</li>
+                  {question.optionFeedback.map(cleanFeedbackText).filter(Boolean).map((feedback, index) => (
+                    <li key={`${question.id}-feedback-${index}`}><b>{String.fromCharCode(65 + index)}.</b> {feedback}</li>
                   ))}
                 </ul>
               </div>

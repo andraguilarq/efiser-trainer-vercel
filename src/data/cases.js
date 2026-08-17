@@ -24,6 +24,7 @@ import wordCasesRemaining from "./wordCasesRemaining";
 import researchPdfCases from "./researchPdfCases";
 import scaProgressiveCases from "./scaProgressiveCases";
 import massiveWordExpansionCases from "./massiveWordExpansionCases";
+import clinicalExpansion20260817 from "./clinicalExpansion20260817";
 
 const rawCases = [
   case001,
@@ -52,59 +53,9 @@ const rawCases = [
   ...researchPdfCases,
   ...scaProgressiveCases,
   ...massiveWordExpansionCases,
+  ...clinicalExpansion20260817,
 ];
 
-function cleanContinuation(text) {
-  return String(text || "")
-    .replace(/^\s*(la|el)\s+mism[oa]\s+paciente[.:,;-]*\s*/i, "")
-    .replace(/^\s*mism[oa]\s+paciente[.:,;-]*\s*/i, "")
-    .replace(/^\s*mismo\s+caso[.:,;-]*\s*/i, "")
-    .trim();
-}
-
-function hasSubstantialContext(text, baseText) {
-  const current = normalize(text);
-  const base = normalize(baseText);
-  if (!current || !base) return false;
-  return current.includes(base.slice(0, Math.min(120, base.length)));
-}
-
-function expandSharedClinicalContext(items) {
-  const groups = new Map();
-  items.forEach((item, index) => {
-    if (!item.caseSet) return;
-    // caseSet values can repeat between imported banks. Never join cases
-    // from different sources, otherwise an unrelated patient is appended.
-    const groupKey = `${item.source || "unknown"}::${item.caseSet}`;
-    if (!groups.has(groupKey)) groups.set(groupKey, []);
-    groups.get(groupKey).push({ item, index });
-  });
-
-  const expanded = items.map((item) => ({ ...item }));
-  groups.forEach((members) => {
-    if (members.length < 2) return;
-    const ordered = [...members].sort((left, right) =>
-      (Number(left.item.step) || 1) - (Number(right.item.step) || 1) || left.index - right.index,
-    );
-    const base = ordered[0].item;
-    const baseText = String(base.case || "").trim();
-    if (!baseText) return;
-
-    ordered.slice(1).forEach(({ item, index }) => {
-      if (hasSubstantialContext(item.case, baseText)) return;
-      const continuation = cleanContinuation(item.case);
-      expanded[index] = {
-        ...item,
-        case: `${baseText}\n\nEvolución o dato adicional para este reactivo:\n${continuation}`,
-      };
-    });
-  });
-  return expanded;
-}
-
-// Cada reactivo debe conservar únicamente el caso que le corresponde.
-// No inferimos evoluciones por coincidencia de caseSet: los bancos importados
-// pueden reutilizar identificadores y eso mezcla pacientes no relacionados.
 const allCases = rawCases;
 
 function normalize(value) {
