@@ -76,3 +76,14 @@ export async function touchLastActive() {
   const { error } = await supabase.rpc("touch_last_active");
   if (error) console.warn("No se pudo actualizar la última actividad", error.message);
 }
+
+export async function updateMyDisplayName(name) {
+  assertConfigured();
+  const cleanName = String(name || "").trim().replace(/\s+/g, " ");
+  if (!cleanName) throw new Error("Escribe el nombre que quieres mostrar.");
+  if (cleanName.length > 80) throw new Error("El nombre debe tener 80 caracteres o menos.");
+
+  const { data, error } = await supabase.rpc("update_my_display_name", { new_name: cleanName });
+  if (error) throw error;
+  return profileFromRow(data);
+}

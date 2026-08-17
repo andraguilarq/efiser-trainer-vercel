@@ -4,9 +4,9 @@ export default function Sidebar({ profile, setPage, secureMode, onSignOut }) {
     { icon: "📝", text: "Nuevo examen", page: "exam" },
     { icon: "📚", text: "Biblioteca", page: "library" },
     { icon: "📈", text: "Estadísticas", page: "statistics" },
+    { icon: "⚙️", text: "Configuración", page: "settings" },
   ];
 
-  if (!secureMode) items.push({ icon: "⚙️", text: "Configuración", page: "settings" });
   if (secureMode && profile.role === "admin") items.push({ icon: "🔒", text: "Resultados de usuarios", page: "admin-results" });
 
   return (

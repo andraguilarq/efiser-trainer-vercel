@@ -93,10 +93,36 @@ begin
 end;
 $$;
 
+create or replace function public.update_my_display_name(new_name text)
+returns public.profiles
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  updated_profile public.profiles;
+begin
+  if new_name is null or char_length(trim(new_name)) not between 1 and 80 then
+    raise exception 'El nombre debe tener entre 1 y 80 caracteres.';
+  end if;
+
+  update public.profiles
+  set display_name = trim(regexp_replace(new_name, '[[:space:]]+', ' ', 'g'))
+  where id = auth.uid()
+  returning * into updated_profile;
+
+  if updated_profile.id is null then
+    raise exception 'No se encontró el perfil de la sesión.';
+  end if;
+  return updated_profile;
+end;
+$$;
+
 revoke all on function public.is_admin() from public;
 revoke all on function public.touch_last_active() from public;
+revoke all on function public.update_my_display_name(text) from public;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.touch_last_active() to authenticated;
+grant execute on function public.update_my_display_name(text) to authenticated;
 
 alter table public.profiles enable row level security;
 alter table public.exam_results enable row level security;

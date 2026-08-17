@@ -74,7 +74,7 @@ function App() {
       case "library": return <Library />;
       case "statistics": return <Statistics userId={activeProfile.id} />;
       case "admin-results": return activeProfile.role === "admin" ? <AdminResults /> : <Dashboard profile={activeProfile} />;
-      case "settings": return <Settings activeProfile={activeProfile} onProfileChange={(profile) => { setActiveProfile(profile); setPage("dashboard"); }} />;
+      case "settings": return <Settings activeProfile={activeProfile} onProfileChange={(profile) => { setActiveProfile(profile); setPage("dashboard"); }} secureMode={isSupabaseConfigured} />;
       default: return <Dashboard profile={activeProfile} />;
     }
   };
