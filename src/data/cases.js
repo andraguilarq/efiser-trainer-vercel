@@ -56,8 +56,19 @@ const rawCases = [
   ...clinicalExpansion20260817,
 ];
 
+function normalizeSpecialty(specialty) {
+  const value = String(specialty || "Otras");
+  if (["Gastroenterología", "Gastroenterología / Hepatología", "Hepatología"].includes(value)) return "Gastroenterología / Hepatología";
+  if (["Ginecología y obstetricia", "Ginecoobstetricia"].includes(value)) return "Gineco-obstetricia";
+  if (["Hematología", "Hematología y Reumatología"].includes(value)) return "Hematología / Reumatología";
+  if (["Bioestadística", "Investigación", "Investigación y estadística"].includes(value)) return "Investigación / Bioestadística";
+  if (["Medicina crítica", "Urgencias"].includes(value)) return "Medicina crítica / Urgencias";
+  return value;
+}
+
 const allCases = rawCases.map((item) => ({
   ...item,
+  specialty: normalizeSpecialty(item.specialty),
   difficulty: Number(item.difficulty) || 3,
 }));
 
