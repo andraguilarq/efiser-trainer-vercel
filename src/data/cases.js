@@ -56,6 +56,42 @@ const rawCases = [
   ...clinicalExpansion20260817,
 ];
 
+function normalizeForContext(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function needsSeriesContext(item) {
+  const clinicalCase = normalizeForContext(item.case);
+  return /^(misma? paciente|mismo paciente|en el mismo estudio|despues de valorar|despues de (iniciar|corregir|los liquidos)|tras (iniciar|corregir|liquidos)|ademas del tratamiento|el paciente y su familia|la paciente (pregunta|recibe|desarrolla)|el cuadro anterior|se obtienen muestras)/.test(clinicalCase);
+}
+
+function addIndependentCaseContext(items) {
+  const series = new Map();
+  items.forEach((item) => {
+    if (!item.caseSet) return;
+    const group = series.get(item.caseSet) || [];
+    group.push(item);
+    series.set(item.caseSet, group);
+  });
+
+  return items.map((item) => {
+    if (!needsSeriesContext(item) || !item.caseSet) return item;
+    const anchor = (series.get(item.caseSet) || [])
+      .filter((candidate) => candidate.id !== item.id && !needsSeriesContext(candidate) && String(candidate.case || "").trim().length >= 90)
+      .sort((a, b) => Number(a.step || 0) - Number(b.step || 0))[0];
+
+    if (!anchor) return item;
+    return {
+      ...item,
+      case: `${anchor.case}\n\nInformación clínica adicional para este reactivo: ${item.case}`,
+    };
+  });
+}
+
 function normalizeSpecialty(specialty) {
   const value = String(specialty || "Otras");
   if (["Gastroenterología", "Gastroenterología / Hepatología", "Hepatología"].includes(value)) return "Gastroenterología / Hepatología";
@@ -66,7 +102,7 @@ function normalizeSpecialty(specialty) {
   return value;
 }
 
-const allCases = rawCases.map((item) => ({
+const allCases = addIndependentCaseContext(rawCases).map((item) => ({
   ...item,
   specialty: normalizeSpecialty(item.specialty),
   difficulty: Number(item.difficulty) || 3,
