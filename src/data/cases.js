@@ -25,6 +25,7 @@ import researchPdfCases from "./researchPdfCases";
 import scaProgressiveCases from "./scaProgressiveCases";
 import massiveWordExpansionCases from "./massiveWordExpansionCases";
 import clinicalExpansion20260817 from "./clinicalExpansion20260817";
+import correctedBankCompletionCases from "./correctedBankCompletionCases";
 
 const rawCases = [
   case001,
@@ -54,6 +55,7 @@ const rawCases = [
   ...scaProgressiveCases,
   ...massiveWordExpansionCases,
   ...clinicalExpansion20260817,
+  ...correctedBankCompletionCases,
 ];
 
 function normalizeForContext(value) {
