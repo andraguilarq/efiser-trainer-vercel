@@ -46,7 +46,7 @@ export function getSpecialties(items) {
 // "reconstructed" conserva reactivos recuperados de EFISER que se reescribieron
 // para que cada uno pueda responderse de manera independiente.
 export function isBankCase(item) {
-  if (["verbatim", "reconstructed", "corrected-bank-derived"].includes(item?.sourceMode)) return true;
+  if (["verbatim", "reconstructed", "corrected-bank-derived", "corrected-bank-objective", "audio-recall-derived"].includes(item?.sourceMode)) return true;
 
   // También incorpora casos completos desarrollados desde los ocho resúmenes
   // EFISER de la usuaria. Esto permite bloques largos sin mezclar el resto de

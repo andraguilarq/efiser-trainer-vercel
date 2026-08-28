@@ -26,6 +26,8 @@ import scaProgressiveCases from "./scaProgressiveCases";
 import massiveWordExpansionCases from "./massiveWordExpansionCases";
 import clinicalExpansion20260817 from "./clinicalExpansion20260817";
 import correctedBankCompletionCases from "./correctedBankCompletionCases";
+import correctedBankObjectiveExpansion from "./bankObjectiveExpansion";
+import audioRecallCases from "./audioRecallCases";
 
 const rawCases = [
   case001,
@@ -56,6 +58,8 @@ const rawCases = [
   ...massiveWordExpansionCases,
   ...clinicalExpansion20260817,
   ...correctedBankCompletionCases,
+  ...correctedBankObjectiveExpansion,
+  ...audioRecallCases,
 ];
 
 function normalizeForContext(value) {
@@ -121,7 +125,13 @@ function normalize(value) {
 
 const seen = new Set();
 const cases = allCases.filter((item) => {
-  const key = [normalize(item.question), ...(item.options || []).map(normalize)].join("|");
+  // Los objetivos recuperados del banco corregido son entradas distintas aunque
+  // compartan una misma competencia. Conservamos su identificador educativo para
+  // no descartar silenciosamente un reactivo nuevo por una coincidencia textual.
+  const objectiveKey = item.sourceMode === "corrected-bank-objective"
+    ? normalize(item.sourceConcept)
+    : "";
+  const key = [normalize(item.question), ...(item.options || []).map(normalize), objectiveKey].join("|");
   if (!key || seen.has(key)) return false;
   seen.add(key);
   return true;
