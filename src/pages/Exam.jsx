@@ -252,7 +252,7 @@ export default function Exam({ bankOnly = false }) {
         <div className="page-header">
           <p className="eyebrow">{bankOnly ? "Simulacro de bancos EFISER" : "Nuevo simulador"}</p>
           <h1>{bankOnly ? "Preguntas de los bancos que proporcionaste" : "¿Cuántas preguntas quieres responder?"}</h1>
-          <p>{bankOnly ? "Este modo usa únicamente reactivos textuales de bancos y reactivos EFISER reconstruidos de forma independiente." : "Se elegirán sin repetirse dentro del examen y se priorizarán los casos no vistos recientemente."}</p>
+          <p>{bankOnly ? "Este modo usa únicamente preguntas de bancos EFISER y casos completos desarrollados desde tus resúmenes EFISER." : "Se elegirán sin repetirse dentro del examen y se priorizarán los casos no vistos recientemente."}</p>
         </div>
 
         <div className="card exam-card setup-card">

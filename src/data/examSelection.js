@@ -46,7 +46,14 @@ export function getSpecialties(items) {
 // "reconstructed" conserva reactivos recuperados de EFISER que se reescribieron
 // para que cada uno pueda responderse de manera independiente.
 export function isBankCase(item) {
-  return item?.sourceMode === "verbatim" || item?.sourceMode === "reconstructed";
+  if (item?.sourceMode === "verbatim" || item?.sourceMode === "reconstructed") return true;
+
+  // También incorpora casos completos desarrollados desde los ocho resúmenes
+  // EFISER de la usuaria. Esto permite bloques largos sin mezclar el resto de
+  // los resúmenes generales de la biblioteca.
+  return /\befiser\b|banco\s+efiser|efiser\s+preguntas/i.test(
+    `${item?.source || ""} ${item?.sourceConcept || ""}`,
+  );
 }
 
 function matchesFilters(item, specialty, difficulty, bankOnly) {
