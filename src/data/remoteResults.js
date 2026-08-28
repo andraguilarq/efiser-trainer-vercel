@@ -46,6 +46,10 @@ function toProgress(exams = []) {
       total: exam.total,
       percentage: Number(exam.percentage),
       grade: Number(exam.grade),
+      estimatedSeconds: Number(exam.filters?.estimatedSeconds || 0) || null,
+      usedSeconds: Number(exam.filters?.usedSeconds || 0) || null,
+      secondsPerQuestion: Number(exam.filters?.secondsPerQuestion || 0) || null,
+      timedOut: Boolean(exam.filters?.timedOut),
       answers,
       missed: answers.filter((answer) => !answer.is_correct).map((answer) => ({
         caseId: answer.question_id,
@@ -62,7 +66,7 @@ function toProgress(exams = []) {
 export async function loadRemoteProgress(userId) {
   const { data, error } = await supabase
     .from("exam_results")
-    .select("id, user_id, created_at, score, total, percentage, grade, exam_answers(id, question_id, title, case_text, question_text, specialty, difficulty, selected_answer, correct_answer, is_correct, selected_index, correct_index)")
+    .select("id, user_id, created_at, score, total, percentage, grade, filters, exam_answers(id, question_id, title, case_text, question_text, specialty, difficulty, selected_answer, correct_answer, is_correct, selected_index, correct_index)")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;

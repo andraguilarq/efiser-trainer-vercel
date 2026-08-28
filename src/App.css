@@ -119,6 +119,21 @@ body{
   white-space:nowrap;
 }
 
+.exam-status{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  text-align:right;
+}
+
+.timer-pill{
+  color:#475569;
+  font-size:14px;
+  font-variant-numeric:tabular-nums;
+  font-weight:700;
+  white-space:nowrap;
+}
+
 .progress-bar{
   background:#e5e7eb;
   border-radius:999px;
@@ -211,6 +226,12 @@ body{
   color:#64748b;
   font-size:14px;
   margin-top:18px;
+}
+
+.time-estimate{
+  color:#475569;
+  font-size:14px;
+  margin:18px 0 0;
 }
 
 .case-text{
@@ -621,6 +642,8 @@ body{
 .answer-detail-item p{color:#475569;line-height:1.5;margin-top:8px;}
 
 @media (max-width:800px){
+  .exam-header{align-items:stretch;flex-direction:column;}
+  .exam-status{text-align:left;}
   .exam-filters{grid-template-columns:1fr;}
   .quick-size-grid,.library-grid,.results-grid,.stats-grid{grid-template-columns:1fr;}
   .specialty-row{grid-template-columns:1fr;}

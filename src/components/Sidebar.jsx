@@ -2,6 +2,7 @@ export default function Sidebar({ profile, setPage, secureMode, onSignOut }) {
   const items = [
     { icon: "🏠", text: "Dashboard", page: "dashboard" },
     { icon: "📝", text: "Nuevo examen", page: "exam" },
+    { icon: "📋", text: "Simulacro de bancos", page: "bank-exam" },
     { icon: "📚", text: "Biblioteca", page: "library" },
     { icon: "📈", text: "Estadísticas", page: "statistics" },
     { icon: "⚙️", text: "Configuración", page: "settings" },

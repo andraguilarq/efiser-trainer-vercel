@@ -42,9 +42,17 @@ export function getSpecialties(items) {
   );
 }
 
-function matchesFilters(item, specialty, difficulty) {
+// Estas son las preguntas importadas de los bancos compartidos por Andrea.
+// "reconstructed" conserva reactivos recuperados de EFISER que se reescribieron
+// para que cada uno pueda responderse de manera independiente.
+export function isBankCase(item) {
+  return item?.sourceMode === "verbatim" || item?.sourceMode === "reconstructed";
+}
+
+function matchesFilters(item, specialty, difficulty, bankOnly) {
   return (specialty === "Todas" || item.specialty === specialty)
-    && (difficulty === "Todas" || Number(item.difficulty) === Number(difficulty));
+    && (difficulty === "Todas" || Number(item.difficulty) === Number(difficulty))
+    && (!bankOnly || isBankCase(item));
 }
 
 function bucketKey(item, specialty) {
@@ -89,10 +97,11 @@ export function selectExamCases(allCases, {
   size,
   specialty = "Todas",
   difficulty = "Todas",
+  bankOnly = false,
   recentIds = getRecentCaseIds(),
   priorityIds = [],
 } = {}) {
-  const candidates = allCases.filter((item) => matchesFilters(item, specialty, difficulty));
+  const candidates = allCases.filter((item) => matchesFilters(item, specialty, difficulty, bankOnly));
   const requested = Math.max(1, Math.min(Number(size) || 1, candidates.length));
   const recentRank = new Map(recentIds.map((id, index) => [String(id), index]));
   const prioritySet = new Set(priorityIds.map(String));

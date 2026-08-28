@@ -70,7 +70,8 @@ function App() {
 
   const renderPage = () => {
     switch (page) {
-      case "exam": return <Exam />;
+      case "exam": return <Exam key="general-exam" />;
+      case "bank-exam": return <Exam bankOnly key="bank-exam" />;
       case "library": return <Library />;
       case "statistics": return <Statistics userId={activeProfile.id} />;
       case "admin-results": return activeProfile.role === "admin" ? <AdminResults /> : <Dashboard profile={activeProfile} />;

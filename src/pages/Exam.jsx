@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import cases from "../data/cases";
 import { getWeaknesses, loadProgress, saveExamResult } from "../data/progress";
-import { getRecentCaseIds, getSpecialties, rememberCaseIds, selectExamCases } from "../data/examSelection";
+import { getRecentCaseIds, getSpecialties, isBankCase, rememberCaseIds, selectExamCases } from "../data/examSelection";
 import { isSupabaseConfigured } from "../data/supabase";
 import { saveRemoteExamResult } from "../data/remoteResults";
+import { estimateExamSeconds, formatEstimatedTime, formatExamDuration, SECONDS_PER_QUESTION } from "../data/examTiming";
 
 const QUICK_SIZES = [10, 20, 50, 100];
 
@@ -43,7 +44,7 @@ function shuffleCaseOptions(item) {
   };
 }
 
-export default function Exam() {
+export default function Exam({ bankOnly = false }) {
   const [examCases, setExamCases] = useState([]);
   const [requestedSize, setRequestedSize] = useState(Math.min(20, cases.length));
   const [current, setCurrent] = useState(0);
@@ -54,12 +55,18 @@ export default function Exam() {
   const [saved, setSaved] = useState(false);
   const [specialtyFilter, setSpecialtyFilter] = useState("Todas");
   const [difficultyFilter, setDifficultyFilter] = useState("Todas");
+  const [startedAt, setStartedAt] = useState(null);
+  const [estimatedSeconds, setEstimatedSeconds] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [finishedUsedSeconds, setFinishedUsedSeconds] = useState(null);
+  const timeExpiredRef = useRef(false);
 
-  const specialties = useMemo(() => getSpecialties(cases), []);
-  const eligibleCases = useMemo(() => cases.filter((item) => (
+  const modeCases = useMemo(() => (bankOnly ? cases.filter(isBankCase) : cases), [bankOnly]);
+  const specialties = useMemo(() => getSpecialties(modeCases), [modeCases]);
+  const eligibleCases = useMemo(() => modeCases.filter((item) => (
     (specialtyFilter === "Todas" || item.specialty === specialtyFilter)
     && (difficultyFilter === "Todas" || Number(item.difficulty) === Number(difficultyFilter))
-  )), [specialtyFilter, difficultyFilter]);
+  )), [difficultyFilter, modeCases, specialtyFilter]);
 
   const question = examCases[current];
   const total = examCases.length;
@@ -69,6 +76,15 @@ export default function Exam() {
   );
   const percentage = total ? Math.round((score / total) * 100) : 0;
   const grade = (percentage / 10).toFixed(1);
+  const setupEstimatedSeconds = estimateExamSeconds(Math.max(1, Math.min(Number(requestedSize) || 1, eligibleCases.length || 1)));
+
+  function beginTimer(size) {
+    const duration = estimateExamSeconds(size);
+    setStartedAt(Date.now());
+    setEstimatedSeconds(duration);
+    setRemainingSeconds(duration);
+    timeExpiredRef.current = false;
+  }
 
   function startExam(size) {
     const safeSize = Math.max(1, Math.min(Number(size) || 1, eligibleCases.length));
@@ -76,6 +92,7 @@ export default function Exam() {
       size: safeSize,
       specialty: specialtyFilter,
       difficulty: difficultyFilter,
+      bankOnly,
       recentIds: getRecentCaseIds(),
     });
     rememberCaseIds(selection.map((item) => item.id));
@@ -87,6 +104,8 @@ export default function Exam() {
     setAnswers([]);
     setCompleted(false);
     setSaved(false);
+    setFinishedUsedSeconds(null);
+    beginTimer(safeSize);
   }
 
   function startAdaptiveExam(size = requestedSize) {
@@ -101,6 +120,7 @@ export default function Exam() {
       size: safeSize,
       specialty: specialtyFilter,
       difficulty: difficultyFilter,
+      bankOnly,
       recentIds: getRecentCaseIds(),
       priorityIds,
     });
@@ -113,6 +133,8 @@ export default function Exam() {
     setAnswers([]);
     setCompleted(false);
     setSaved(false);
+    setFinishedUsedSeconds(null);
+    beginTimer(safeSize);
   }
 
   function checkAnswer() {
@@ -140,17 +162,38 @@ export default function Exam() {
     setShowFeedback(true);
   }
 
-  async function nextQuestion() {
-    if (current + 1 >= total) {
-      if (!saved) {
-        const result = { answers, grade, percentage, score, total };
+  function getUsedSeconds() {
+    if (!startedAt) return 0;
+    return Math.min(estimatedSeconds, Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+  }
+
+  async function finishExam({ timedOut = false } = {}) {
+    if (!saved) {
+        const usedSeconds = getUsedSeconds();
+        setFinishedUsedSeconds(usedSeconds);
+        const result = {
+          answers,
+          grade,
+          percentage,
+          score,
+          total,
+          estimatedSeconds,
+          usedSeconds,
+          secondsPerQuestion: SECONDS_PER_QUESTION,
+          timedOut,
+        };
         saveExamResult(result);
         if (isSupabaseConfigured) {
           try {
             await saveRemoteExamResult(result, {
               specialty: specialtyFilter,
               difficulty: difficultyFilter,
+              bankOnly,
               requestedSize,
+              estimatedSeconds,
+              usedSeconds,
+              secondsPerQuestion: SECONDS_PER_QUESTION,
+              timedOut,
             });
           } catch (error) {
             console.error("No se pudo guardar el examen en la cuenta", error);
@@ -159,7 +202,12 @@ export default function Exam() {
         }
         setSaved(true);
       }
-      setCompleted(true);
+    setCompleted(true);
+  }
+
+  async function nextQuestion() {
+    if (current + 1 >= total) {
+      await finishExam();
       return;
     }
     setCurrent((value) => value + 1);
@@ -167,18 +215,44 @@ export default function Exam() {
     setShowFeedback(false);
   }
 
+  useEffect(() => {
+    if (!startedAt || !total || completed) return undefined;
+
+    const updateRemainingTime = () => {
+      const nextRemaining = Math.max(0, estimatedSeconds - Math.floor((Date.now() - startedAt) / 1000));
+      setRemainingSeconds(nextRemaining);
+
+      if (nextRemaining === 0 && !timeExpiredRef.current) {
+        timeExpiredRef.current = true;
+        window.setTimeout(() => {
+          alert("Tiempo finalizado. Se guardarán las respuestas que ya calificaste.");
+          void finishExam({ timedOut: true });
+        }, 0);
+      }
+    };
+
+    updateRemainingTime();
+    const intervalId = window.setInterval(updateRemainingTime, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [answers, completed, estimatedSeconds, saved, startedAt, total]);
+
   function returnToSetup() {
     setExamCases([]);
     setCompleted(false);
+    setFinishedUsedSeconds(null);
+    setStartedAt(null);
+    setEstimatedSeconds(0);
+    setRemainingSeconds(0);
+    timeExpiredRef.current = false;
   }
 
   if (!total) {
     return (
       <section className="exam-shell setup-shell">
         <div className="page-header">
-          <p className="eyebrow">Nuevo simulador</p>
-          <h1>¿Cuántas preguntas quieres responder?</h1>
-          <p>Se elegirán sin repetirse dentro del examen y se priorizarán los casos no vistos recientemente.</p>
+          <p className="eyebrow">{bankOnly ? "Simulacro de bancos EFISER" : "Nuevo simulador"}</p>
+          <h1>{bankOnly ? "Preguntas de los bancos que proporcionaste" : "¿Cuántas preguntas quieres responder?"}</h1>
+          <p>{bankOnly ? "Este modo usa únicamente reactivos textuales de bancos y reactivos EFISER reconstruidos de forma independiente." : "Se elegirán sin repetirse dentro del examen y se priorizarán los casos no vistos recientemente."}</p>
         </div>
 
         <div className="card exam-card setup-card">
@@ -227,7 +301,8 @@ export default function Exam() {
               <button disabled={!eligibleCases.length} onClick={() => startExam(requestedSize)}>Comenzar</button>
             </div>
           </label>
-          <p className="setup-note">Banco disponible con este filtro: {eligibleCases.length} casos clínicos.</p>
+          <p className="time-estimate">Tiempo estimado: <b>{formatEstimatedTime(setupEstimatedSeconds)}</b> ({SECONDS_PER_QUESTION} segundos por pregunta).</p>
+          <p className="setup-note">Banco disponible con este filtro: {eligibleCases.length} reactivos.</p>
         </div>
       </section>
     );
@@ -235,6 +310,7 @@ export default function Exam() {
 
   if (completed) {
     const missed = answers.filter((answer) => !answer.correct);
+    const reportedUsedSeconds = finishedUsedSeconds ?? getUsedSeconds();
     return (
       <section className="exam-shell">
         <div className="exam-header">
@@ -245,6 +321,8 @@ export default function Exam() {
           <div className="result-card"><span>Calificación</span><strong>{grade}/10</strong></div>
           <div className="result-card"><span>Aciertos</span><strong>{score}/{total}</strong></div>
           <div className="result-card"><span>Porcentaje</span><strong>{percentage}%</strong></div>
+          <div className="result-card"><span>Tiempo utilizado</span><strong>{formatExamDuration(reportedUsedSeconds)}</strong></div>
+          <div className="result-card"><span>Promedio por pregunta</span><strong>{formatExamDuration(total ? Math.round(reportedUsedSeconds / total) : 0)}</strong></div>
         </div>
         <div className="card exam-card">
           <h2>Retroalimentación</h2>
@@ -263,9 +341,9 @@ export default function Exam() {
 
   return (
     <section className="exam-shell">
-      <div className="exam-header">
-        <div><p className="eyebrow">Caso {current + 1} de {total}</p><h1>Caso clínico</h1></div>
-        <div className="score-pill">Aciertos: {score}/{answers.length}</div>
+        <div className="exam-header">
+          <div><p className="eyebrow">Caso {current + 1} de {total}</p><h1>Caso clínico</h1></div>
+        <div className="exam-status"><div className="score-pill">Aciertos: {score}/{answers.length}</div><div className="timer-pill">Tiempo restante: {formatExamDuration(remainingSeconds)}</div></div>
       </div>
       <div className="progress-bar"><div className="progress-fill" style={{ width: `${((current + 1) / total) * 100}%` }} /></div>
       <div className="card exam-card">

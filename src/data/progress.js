@@ -65,6 +65,10 @@ export function saveExamResult(result) {
         total: result.total,
         percentage: result.percentage,
         grade: result.grade,
+        estimatedSeconds: result.estimatedSeconds || null,
+        usedSeconds: result.usedSeconds || null,
+        secondsPerQuestion: result.secondsPerQuestion || null,
+        timedOut: Boolean(result.timedOut),
         missed: result.answers
           .filter((answer) => !answer.correct)
           .map((answer) => ({
