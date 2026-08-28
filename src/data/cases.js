@@ -26,6 +26,7 @@ import scaProgressiveCases from "./scaProgressiveCases";
 import massiveWordExpansionCases from "./massiveWordExpansionCases";
 import clinicalExpansion20260817 from "./clinicalExpansion20260817";
 import correctedBankCompletionCases from "./correctedBankCompletionCases";
+import newMedicalGuidesCases from "./newMedicalGuidesCases";
 import correctedBankObjectiveExpansion from "./bankObjectiveExpansion";
 import audioRecallCases from "./audioRecallCases";
 
@@ -58,6 +59,7 @@ const rawCases = [
   ...massiveWordExpansionCases,
   ...clinicalExpansion20260817,
   ...correctedBankCompletionCases,
+  ...newMedicalGuidesCases,
   ...correctedBankObjectiveExpansion,
   ...audioRecallCases,
 ];
