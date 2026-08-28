@@ -1,6 +1,21 @@
 import { useState } from "react";
 import { updateMyDisplayName } from "../data/auth";
 import { activateProfile, createProfile, deleteProfile, getActiveProfile, getProfiles } from "../data/profiles";
+import { prepareOfflineContent, verifyOfflineContent } from "../data/offline";
+
+function OfflineSection() {
+  const [status, setStatus] = useState(null);
+  const [working, setWorking] = useState(false);
+  async function prepare() {
+    setWorking(true);
+    try { setStatus(await prepareOfflineContent()); } catch (error) { setStatus({ ready: false, missing: [error.message] }); } finally { setWorking(false); }
+  }
+  async function verify() {
+    setWorking(true);
+    try { setStatus(await verifyOfflineContent()); } finally { setWorking(false); }
+  }
+  return <section className="card exam-card offline-card"><p className="eyebrow">Sin conexión</p><h2>Uso offline</h2><p>Guarda la aplicación y el contenido cargado para estudiar durante un viaje. Tus respuestas y marcadores siguen guardándose en este dispositivo.</p><div><button disabled={working} onClick={prepare}>{working ? "Preparando…" : "Preparar contenido para uso sin conexión"}</button><button className="secondary-button" disabled={working} onClick={verify}>✓ Verificar modo offline</button></div>{status && <p className={status.ready ? "form-notice" : "form-error"}>{status.ready ? `✓ Listo para usar sin conexión (${status.cachedCount} recursos almacenados).` : `⚠ Faltan recursos: ${status.missing.join(", ")}`}</p>}</section>;
+}
 
 function AccountSettings({ activeProfile, onProfileChange }) {
   const [name, setName] = useState(activeProfile.name || "");
@@ -88,6 +103,8 @@ function LocalProfileSettings({ activeProfile, onProfileChange }) {
 }
 
 export default function Settings({ activeProfile, onProfileChange, secureMode }) {
-  if (secureMode) return <AccountSettings activeProfile={activeProfile} onProfileChange={onProfileChange} />;
-  return <LocalProfileSettings activeProfile={activeProfile} onProfileChange={onProfileChange} />;
+  return <>
+    {secureMode ? <AccountSettings activeProfile={activeProfile} onProfileChange={onProfileChange} /> : <LocalProfileSettings activeProfile={activeProfile} onProfileChange={onProfileChange} />}
+    <div className="settings-offline-wrap"><OfflineSection /></div>
+  </>;
 }

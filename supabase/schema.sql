@@ -44,11 +44,31 @@ create table if not exists public.exam_answers (
   correct_index smallint
 );
 
+create table if not exists public.user_study_state (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  state jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.question_reports (
+  id text primary key,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  question_id bigint,
+  question_text text not null,
+  case_text text,
+  source text,
+  reason text not null,
+  comment text,
+  status text not null default 'pendiente' check (status in ('pendiente', 'revisado', 'resuelto')),
+  created_at timestamptz not null default now()
+);
+
 alter table public.exam_answers add column if not exists case_text text;
 
 create index if not exists exam_results_user_created_idx on public.exam_results(user_id, created_at desc);
 create index if not exists exam_answers_exam_idx on public.exam_answers(exam_id);
 create index if not exists exam_answers_user_idx on public.exam_answers(user_id);
+create index if not exists question_reports_created_idx on public.question_reports(created_at desc);
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -127,6 +147,8 @@ grant execute on function public.update_my_display_name(text) to authenticated;
 alter table public.profiles enable row level security;
 alter table public.exam_results enable row level security;
 alter table public.exam_answers enable row level security;
+alter table public.user_study_state enable row level security;
+alter table public.question_reports enable row level security;
 
 drop policy if exists "profiles: self or admin select" on public.profiles;
 create policy "profiles: self or admin select" on public.profiles for select to authenticated
@@ -151,6 +173,30 @@ create policy "answers: self or admin select" on public.exam_answers for select 
 drop policy if exists "answers: self insert" on public.exam_answers;
 create policy "answers: self insert" on public.exam_answers for insert to authenticated
   with check (user_id = auth.uid());
+
+drop policy if exists "study state: self or admin select" on public.user_study_state;
+create policy "study state: self or admin select" on public.user_study_state for select to authenticated
+  using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "study state: self insert" on public.user_study_state;
+create policy "study state: self insert" on public.user_study_state for insert to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "study state: self update" on public.user_study_state;
+create policy "study state: self update" on public.user_study_state for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "reports: self or admin select" on public.question_reports;
+create policy "reports: self or admin select" on public.question_reports for select to authenticated
+  using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "reports: self insert" on public.question_reports;
+create policy "reports: self insert" on public.question_reports for insert to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "reports: admin update" on public.question_reports;
+create policy "reports: admin update" on public.question_reports for update to authenticated
+  using (public.is_admin()) with check (public.is_admin());
 
 -- ÚNICO paso para nombrarte administradora, después de registrarte una vez:
 -- update public.profiles set role = 'admin'

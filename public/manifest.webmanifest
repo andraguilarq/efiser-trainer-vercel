@@ -1,0 +1,9 @@
+{
+  "name": "EFISER Trainer",
+  "short_name": "EFISER",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fa",
+  "theme_color": "#2563eb",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

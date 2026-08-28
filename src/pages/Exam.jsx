@@ -5,6 +5,7 @@ import { getRecentCaseIds, getSpecialties, isBankCase, rememberCaseIds, selectEx
 import { isSupabaseConfigured } from "../data/supabase";
 import { saveRemoteExamResult } from "../data/remoteResults";
 import { estimateExamSeconds, formatEstimatedTime, formatExamDuration, SECONDS_PER_QUESTION } from "../data/examTiming";
+import { createQuestionReport, isQuestionSaved, loadStudyState, recordQuestionOutcomes, toggleSavedQuestion } from "../data/studyState";
 
 const QUICK_SIZES = [10, 20, 50, 100];
 
@@ -44,7 +45,7 @@ function shuffleCaseOptions(item) {
   };
 }
 
-export default function Exam({ bankOnly = false }) {
+export default function Exam({ bankOnly = false, onNavigate, practiceRequest, userName }) {
   const [examCases, setExamCases] = useState([]);
   const [requestedSize, setRequestedSize] = useState(Math.min(20, cases.length));
   const [current, setCurrent] = useState(0);
@@ -55,18 +56,33 @@ export default function Exam({ bankOnly = false }) {
   const [saved, setSaved] = useState(false);
   const [specialtyFilter, setSpecialtyFilter] = useState("Todas");
   const [difficultyFilter, setDifficultyFilter] = useState("Todas");
+  const [topicFilter, setTopicFilter] = useState(practiceRequest?.topic || "Todos");
+  const [examMode, setExamMode] = useState("study");
+  const [studyState, setStudyState] = useState(loadStudyState);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState("respuesta posiblemente incorrecta");
+  const [reportComment, setReportComment] = useState("");
   const [startedAt, setStartedAt] = useState(null);
   const [estimatedSeconds, setEstimatedSeconds] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [finishedUsedSeconds, setFinishedUsedSeconds] = useState(null);
   const timeExpiredRef = useRef(false);
 
-  const modeCases = useMemo(() => (bankOnly ? cases.filter(isBankCase) : cases), [bankOnly]);
+  const scopedCases = useMemo(() => practiceRequest?.ids?.length
+    ? cases.filter((item) => practiceRequest.ids.map(String).includes(String(item.id)))
+    : cases, [practiceRequest]);
+  const modeCases = useMemo(() => (bankOnly ? scopedCases.filter(isBankCase) : scopedCases), [bankOnly, scopedCases]);
   const specialties = useMemo(() => getSpecialties(modeCases), [modeCases]);
   const eligibleCases = useMemo(() => modeCases.filter((item) => (
     (specialtyFilter === "Todas" || item.specialty === specialtyFilter)
     && (difficultyFilter === "Todas" || Number(item.difficulty) === Number(difficultyFilter))
-  )), [difficultyFilter, modeCases, specialtyFilter]);
+    && (topicFilter === "Todos" || [item.topic, item.subtopic, item.sourceConcept, ...(item.tags || [])]
+      .filter(Boolean).map((value) => String(value).toLocaleLowerCase("es")).includes(String(topicFilter).toLocaleLowerCase("es")))
+  )), [difficultyFilter, modeCases, specialtyFilter, topicFilter]);
+  const topics = useMemo(() => {
+    const values = modeCases.flatMap((item) => [item.topic, item.subtopic, item.sourceConcept, ...(item.tags || [])]).filter(Boolean);
+    return ["Todos", ...new Set(values)].sort((a, b) => String(a).localeCompare(String(b), "es"));
+  }, [modeCases]);
 
   const question = examCases[current];
   const total = examCases.length;
@@ -88,11 +104,12 @@ export default function Exam({ bankOnly = false }) {
 
   function startExam(size) {
     const safeSize = Math.max(1, Math.min(Number(size) || 1, eligibleCases.length));
-    const selection = selectExamCases(cases, {
+    const selection = selectExamCases(scopedCases, {
       size: safeSize,
       specialty: specialtyFilter,
       difficulty: difficultyFilter,
       bankOnly,
+      topic: topicFilter,
       recentIds: getRecentCaseIds(),
     });
     rememberCaseIds(selection.map((item) => item.id));
@@ -116,11 +133,12 @@ export default function Exam({ bankOnly = false }) {
     const priorityIds = eligibleCases
       .filter((item) => missedIds.has(Number(item.id)) || weakSpecialties.has(item.specialty))
       .map((item) => item.id);
-    const selection = selectExamCases(cases, {
+    const selection = selectExamCases(scopedCases, {
       size: safeSize,
       specialty: specialtyFilter,
       difficulty: difficultyFilter,
       bankOnly,
+      topic: topicFilter,
       recentIds: getRecentCaseIds(),
       priorityIds,
     });
@@ -143,9 +161,7 @@ export default function Exam({ bankOnly = false }) {
       return;
     }
     const correct = selected === question.answer;
-    setAnswers((previous) => [
-      ...previous,
-      {
+    const nextAnswer = {
         caseId: question.id,
         title: `Caso ${current + 1}`,
         specialty: question.specialty,
@@ -157,8 +173,20 @@ export default function Exam({ bankOnly = false }) {
         correctAnswer: question.answer,
         selectedAnswer: question.options[selected],
         correctAnswerText: question.options[question.answer],
-      },
-    ]);
+        topic: question.topic || question.subtopic || question.sourceConcept || question.tags?.[0] || "General",
+        explanation: question.explanation,
+        optionFeedback: question.optionFeedback,
+      };
+    const nextAnswers = [...answers, nextAnswer];
+    setAnswers(nextAnswers);
+    if (examMode === "exam") {
+      if (current + 1 >= total) void finishExam({ answersOverride: nextAnswers });
+      else {
+        setCurrent((value) => value + 1);
+        setSelected(null);
+      }
+      return;
+    }
     setShowFeedback(true);
   }
 
@@ -167,15 +195,19 @@ export default function Exam({ bankOnly = false }) {
     return Math.min(estimatedSeconds, Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
   }
 
-  async function finishExam({ timedOut = false } = {}) {
+  async function finishExam({ timedOut = false, answersOverride } = {}) {
     if (!saved) {
+        const effectiveAnswers = answersOverride || answers;
+        const effectiveScore = effectiveAnswers.filter((answer) => answer.correct).length;
+        const effectivePercentage = total ? Math.round((effectiveScore / total) * 100) : 0;
+        const effectiveGrade = (effectivePercentage / 10).toFixed(1);
         const usedSeconds = getUsedSeconds();
         setFinishedUsedSeconds(usedSeconds);
         const result = {
-          answers,
-          grade,
-          percentage,
-          score,
+          answers: effectiveAnswers,
+          grade: effectiveGrade,
+          percentage: effectivePercentage,
+          score: effectiveScore,
           total,
           estimatedSeconds,
           usedSeconds,
@@ -183,6 +215,7 @@ export default function Exam({ bankOnly = false }) {
           timedOut,
         };
         saveExamResult(result);
+        recordQuestionOutcomes(effectiveAnswers);
         if (isSupabaseConfigured) {
           try {
             await saveRemoteExamResult(result, {
@@ -246,6 +279,18 @@ export default function Exam({ bankOnly = false }) {
     timeExpiredRef.current = false;
   }
 
+  function toggleSavedCurrentQuestion() {
+    if (!question) return;
+    setStudyState(toggleSavedQuestion(question.id));
+  }
+
+  function submitQuestionReport() {
+    createQuestionReport({ question, reason: reportReason, comment: reportComment, userName });
+    setShowReport(false);
+    setReportComment("");
+    alert("Reporte guardado para revisión.");
+  }
+
   if (!total) {
     return (
       <section className="exam-shell setup-shell">
@@ -262,6 +307,19 @@ export default function Exam({ bankOnly = false }) {
               <select value={specialtyFilter} onChange={(event) => setSpecialtyFilter(event.target.value)}>
                 <option value="Todas">Todas las especialidades</option>
                 {specialties.map((specialty) => <option key={specialty} value={specialty}>{specialty}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Tema</span>
+              <select value={topicFilter} onChange={(event) => setTopicFilter(event.target.value)}>
+                {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Modo</span>
+              <select value={examMode} onChange={(event) => setExamMode(event.target.value)}>
+                <option value="study">Entrenamiento: retroalimentación inmediata</option>
+                <option value="exam">Examen: retroalimentación al final</option>
               </select>
             </label>
             <label>
@@ -332,9 +390,12 @@ export default function Exam({ bankOnly = false }) {
             </ul></>
           )}
         </div>
-        <div className="card exam-card"><h2>Revisión rápida</h2><ul className="review-list">
-          {answers.map((answer, index) => <li key={`${answer.caseId}-${index}`}>{answer.correct ? "✓" : "✕"} {answer.title} ({answer.specialty})</li>)}
-        </ul></div>
+        <div className="card exam-card"><h2>Revisión rápida</h2><div className="answer-detail">
+          {answers.map((answer, index) => <article className={`answer-detail-item ${answer.correct ? "correct-answer" : "wrong-answer"}`} key={`${answer.caseId}-${index}`}>
+            <b>{answer.correct ? "Correcta" : "Incorrecta"} · {answer.specialty}</b><p>{answer.questionText}</p>
+            <p><b>Respuesta correcta:</b> {answer.correctAnswerText}</p><p>{cleanFeedbackText(answer.explanation)}</p>
+          </article>)}
+        </div></div>
       </section>
     );
   }
@@ -347,6 +408,7 @@ export default function Exam({ bankOnly = false }) {
       </div>
       <div className="progress-bar"><div className="progress-fill" style={{ width: `${((current + 1) / total) * 100}%` }} /></div>
       <div className="card exam-card">
+        <div className="question-actions"><button className="quiet-button" onClick={toggleSavedCurrentQuestion}>{isQuestionSaved(question.id, studyState) ? "🔖 Guardada" : "🔖 Guardar para repasar"}</button><button className="quiet-button" onClick={() => setShowReport(true)}>⚑ Reportar problema</button></div>
         <p className="case-text">{question.case}</p>
         <h3>{question.question}</h3>
         <div className="options-list">
@@ -383,9 +445,11 @@ export default function Exam({ bankOnly = false }) {
                 </ul>
               </div>
             ) : null}
+            <div className="feedback-actions"><button className="secondary-button" onClick={() => onNavigate?.("review", { specialty: question.specialty, topic: question.topic || question.subtopic || question.sourceConcept || question.tags?.[0] })}>Repasar este tema</button></div>
             <button onClick={nextQuestion}>{current + 1 >= total ? "Ver resultado" : "Siguiente caso"}</button>
           </div>
         )}
+        {showReport && <div className="report-panel"><h3>Reportar problema</h3><select value={reportReason} onChange={(event) => setReportReason(event.target.value)}>{["respuesta posiblemente incorrecta", "dos respuestas potencialmente correctas", "error de redacción", "información desactualizada", "error en opciones", "explicación incorrecta", "otro"].map((reason) => <option key={reason}>{reason}</option>)}</select><textarea value={reportComment} onChange={(event) => setReportComment(event.target.value)} placeholder="Comentario opcional" /><div><button className="secondary-button" onClick={() => setShowReport(false)}>Cancelar</button><button onClick={submitQuestionReport}>Guardar reporte</button></div></div>}
       </div>
     </section>
   );

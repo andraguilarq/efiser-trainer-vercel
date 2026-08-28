@@ -14,6 +14,8 @@ const emptyProgress = {
   bestGrade: 0,
   history: [],
   bySpecialty: {},
+  byTopic: {},
+  byDifficulty: {},
   missedIds: {},
 };
 
@@ -34,6 +36,8 @@ export function loadProgress() {
 export function saveExamResult(result) {
   const progress = loadProgress();
   const nextBySpecialty = { ...progress.bySpecialty };
+  const nextByTopic = { ...progress.byTopic };
+  const nextByDifficulty = { ...progress.byDifficulty };
   const nextMissedIds = { ...progress.missedIds };
 
   result.answers.forEach((answer) => {
@@ -44,9 +48,21 @@ export function saveExamResult(result) {
       correct: current.correct + (answer.correct ? 1 : 0),
     };
 
-    if (answer.correct) {
-      delete nextMissedIds[answer.caseId];
-    } else {
+    const topic = answer.topic || "General";
+    const topicKey = `${key}::${topic}`;
+    const topicCurrent = nextByTopic[topicKey] || { specialty: key, topic, total: 0, correct: 0, lastAnsweredAt: null };
+    nextByTopic[topicKey] = {
+      ...topicCurrent,
+      total: topicCurrent.total + 1,
+      correct: topicCurrent.correct + (answer.correct ? 1 : 0),
+      lastAnsweredAt: new Date().toISOString(),
+    };
+
+    const difficultyKey = `Nivel ${answer.difficulty || "sin clasificar"}`;
+    const difficultyCurrent = nextByDifficulty[difficultyKey] || { total: 0, correct: 0 };
+    nextByDifficulty[difficultyKey] = { total: difficultyCurrent.total + 1, correct: difficultyCurrent.correct + (answer.correct ? 1 : 0) };
+
+    if (!answer.correct) {
       nextMissedIds[answer.caseId] = (nextMissedIds[answer.caseId] || 0) + 1;
     }
   });
@@ -57,6 +73,8 @@ export function saveExamResult(result) {
     correctAnswers: progress.correctAnswers + result.score,
     bestGrade: Math.max(progress.bestGrade || 0, Number(result.grade)),
     bySpecialty: nextBySpecialty,
+    byTopic: nextByTopic,
+    byDifficulty: nextByDifficulty,
     missedIds: nextMissedIds,
     history: [
       {

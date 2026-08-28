@@ -56,10 +56,14 @@ export function isBankCase(item) {
   );
 }
 
-function matchesFilters(item, specialty, difficulty, bankOnly) {
+function matchesFilters(item, specialty, difficulty, bankOnly, topic) {
+  const topicValues = [item.topic, item.subtopic, item.sourceConcept, ...(item.tags || [])]
+    .filter(Boolean)
+    .map((value) => String(value).toLocaleLowerCase("es"));
   return (specialty === "Todas" || item.specialty === specialty)
     && (difficulty === "Todas" || Number(item.difficulty) === Number(difficulty))
-    && (!bankOnly || isBankCase(item));
+    && (!bankOnly || isBankCase(item))
+    && (topic === "Todos" || topicValues.includes(String(topic).toLocaleLowerCase("es")));
 }
 
 function normalizeForFingerprint(value) {
@@ -128,13 +132,14 @@ export function selectExamCases(allCases, {
   specialty = "Todas",
   difficulty = "Todas",
   bankOnly = false,
+  topic = "Todos",
   recentIds = getRecentCaseIds(),
   priorityIds = [],
 } = {}) {
   // Segunda barrera: aunque un archivo futuro incluya por error un reactivo
   // repetido, nunca podrá entrar dos veces al mismo examen.
   const candidates = removeDuplicateReactives(
-    allCases.filter((item) => matchesFilters(item, specialty, difficulty, bankOnly)),
+    allCases.filter((item) => matchesFilters(item, specialty, difficulty, bankOnly, topic)),
   );
   const requested = Math.max(1, Math.min(Number(size) || 1, candidates.length));
   const recentRank = new Map(recentIds.map((id, index) => [String(id), index]));

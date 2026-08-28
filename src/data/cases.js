@@ -29,6 +29,7 @@ import correctedBankCompletionCases from "./correctedBankCompletionCases";
 import newMedicalGuidesCases from "./newMedicalGuidesCases";
 import correctedBankObjectiveExpansion from "./bankObjectiveExpansion";
 import audioRecallCases from "./audioRecallCases";
+import integratedStudyCases from "./integratedStudyCases";
 
 const rawCases = [
   case001,
@@ -62,6 +63,7 @@ const rawCases = [
   ...newMedicalGuidesCases,
   ...correctedBankObjectiveExpansion,
   ...audioRecallCases,
+  ...integratedStudyCases,
 ];
 
 function normalizeForContext(value) {

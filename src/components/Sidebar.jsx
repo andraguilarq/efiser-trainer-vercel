@@ -4,11 +4,18 @@ export default function Sidebar({ profile, setPage, secureMode, onSignOut }) {
     { icon: "📝", text: "Nuevo examen", page: "exam" },
     { icon: "📋", text: "Simulacro de bancos", page: "bank-exam" },
     { icon: "📚", text: "Biblioteca", page: "library" },
+    { icon: "🧠", text: "Repaso", page: "review" },
+    { icon: "🔖", text: "Preguntas guardadas", page: "saved" },
+    { icon: "💎", text: "Perlas", page: "pearls" },
+    { icon: "🎯", text: "¿Qué debo estudiar?", page: "study-plan" },
     { icon: "📈", text: "Estadísticas", page: "statistics" },
     { icon: "⚙️", text: "Configuración", page: "settings" },
   ];
 
-  if (secureMode && profile.role === "admin") items.push({ icon: "🔒", text: "Resultados de usuarios", page: "admin-results" });
+  if (secureMode && profile.role === "admin") items.push(
+    { icon: "🔒", text: "Resultados de usuarios", page: "admin-results" },
+    { icon: "⚑", text: "Reportes", page: "admin-reports" },
+  );
 
   return (
     <aside className="sidebar">
