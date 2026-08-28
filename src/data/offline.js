@@ -2,6 +2,7 @@ import cases from "./cases";
 import { pearls, studyResources } from "./studyResources";
 
 const OFFLINE_KEY = "efiser-trainer-offline-prepared";
+const OFFLINE_CACHE = "efiser-trainer-runtime-v2";
 
 export function registerOfflineSupport() {
   if (!("serviceWorker" in navigator)) return Promise.resolve(null);
@@ -21,7 +22,7 @@ async function cacheUrls() {
 export async function prepareOfflineContent() {
   if (!("caches" in window)) throw new Error("Este navegador no permite almacenamiento offline.");
   const urls = await cacheUrls();
-  const cache = await caches.open("efiser-trainer-runtime-v1");
+  const cache = await caches.open(OFFLINE_CACHE);
   await Promise.allSettled(urls.map((url) => cache.add(url)));
   localStorage.setItem(OFFLINE_KEY, JSON.stringify({
     preparedAt: new Date().toISOString(),
@@ -37,7 +38,7 @@ export async function verifyOfflineContent() {
   if (!("caches" in window)) return { ready: false, missing: ["Almacenamiento offline no disponible"] };
   const prepared = JSON.parse(localStorage.getItem(OFFLINE_KEY) || "null");
   const names = await caches.keys();
-  const cache = await caches.open("efiser-trainer-runtime-v1");
+  const cache = await caches.open(OFFLINE_CACHE);
   const shell = await cache.match("/") || await cache.match("/index.html");
   const cached = await cache.keys();
   const missing = [];
@@ -50,5 +51,5 @@ export async function verifyOfflineContent() {
   if (prepared && prepared.caseCount !== cases.length) missing.push("Banco actualizado: vuelve a preparar el contenido");
   if (prepared && prepared.resourceCount !== studyResources.length) missing.push("Recursos de Repaso actualizados: vuelve a preparar el contenido");
   if (prepared && prepared.pearlCount !== pearls.length) missing.push("Perlas actualizadas: vuelve a preparar el contenido");
-  return { ready: Boolean(shell && prepared && cached.length && !missing.length), missing, cachedCount: cached.length, preparedAt: prepared?.preparedAt || null, serviceWorker: names.includes("efiser-trainer-runtime-v1") || "serviceWorker" in navigator };
+  return { ready: Boolean(shell && prepared && cached.length && !missing.length), missing, cachedCount: cached.length, preparedAt: prepared?.preparedAt || null, serviceWorker: names.includes(OFFLINE_CACHE) || "serviceWorker" in navigator };
 }
