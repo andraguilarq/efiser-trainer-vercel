@@ -62,6 +62,29 @@ function matchesFilters(item, specialty, difficulty, bankOnly) {
     && (!bankOnly || isBankCase(item));
 }
 
+function normalizeForFingerprint(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function removeDuplicateReactives(items) {
+  const fingerprints = new Set();
+  return items.filter((item) => {
+    const fingerprint = [
+      normalizeForFingerprint(item.case),
+      normalizeForFingerprint(item.question),
+      ...(item.options || []).map(normalizeForFingerprint).sort(),
+    ].join("|");
+    if (fingerprints.has(fingerprint)) return false;
+    fingerprints.add(fingerprint);
+    return true;
+  });
+}
+
 function bucketKey(item, specialty) {
   const subtopic = item.subtopic || item.sourceConcept || item.tags?.[0] || "general";
   return specialty === "Todas" ? `${item.specialty}::${subtopic}` : subtopic;
@@ -108,7 +131,11 @@ export function selectExamCases(allCases, {
   recentIds = getRecentCaseIds(),
   priorityIds = [],
 } = {}) {
-  const candidates = allCases.filter((item) => matchesFilters(item, specialty, difficulty, bankOnly));
+  // Segunda barrera: aunque un archivo futuro incluya por error un reactivo
+  // repetido, nunca podrá entrar dos veces al mismo examen.
+  const candidates = removeDuplicateReactives(
+    allCases.filter((item) => matchesFilters(item, specialty, difficulty, bankOnly)),
+  );
   const requested = Math.max(1, Math.min(Number(size) || 1, candidates.length));
   const recentRank = new Map(recentIds.map((id, index) => [String(id), index]));
   const prioritySet = new Set(priorityIds.map(String));

@@ -127,13 +127,10 @@ function normalize(value) {
 
 const seen = new Set();
 const cases = allCases.filter((item) => {
-  // Los objetivos recuperados del banco corregido son entradas distintas aunque
-  // compartan una misma competencia. Conservamos su identificador educativo para
-  // no descartar silenciosamente un reactivo nuevo por una coincidencia textual.
-  const objectiveKey = item.sourceMode === "corrected-bank-objective"
-    ? normalize(item.sourceConcept)
-    : "";
-  const key = [normalize(item.question), ...(item.options || []).map(normalize), objectiveKey].join("|");
+  // Si el mismo enunciado y el mismo conjunto de opciones reaparecen en un
+  // archivo importado, conservar solo una versión. Esto evita variantes que
+  // se sienten como la misma pregunta aunque cambien metadatos o el orden.
+  const key = [normalize(item.question), ...(item.options || []).map(normalize).sort()].join("|");
   if (!key || seen.has(key)) return false;
   seen.add(key);
   return true;
